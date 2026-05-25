@@ -1,11 +1,27 @@
-_HTML = r"""<!DOCTYPE html>
+"""
+Professional modern API documentation page.
+Served at /api/docs with dark theme and interactive examples.
+"""
+
+from fastapi import APIRouter
+from fastapi.responses import HTMLResponse
+
+router = APIRouter(tags=["docs"])
+
+
+@router.get("/api/docs", response_class=HTMLResponse)
+async def api_docs():
+    return _HTML
+
+
+_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0a0a1a">
 <title>YTDLP-API Docs</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f4d6;</text></svg>">
 <style>
 :root{
   --bg:#0a0a1a;--bg2:#111128;--card:#1a1a3e;--card2:#222255;
@@ -118,21 +134,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 
 <!-- Header -->
 <div class="doc-header">
-  <h1>🎵 YTDLP-API</h1>
+  <h1>&#x1f3b5; YTDLP-API</h1>
   <p>Free &bull; No API key &bull; No login &bull; No rate-limit<br>Audio transcode + Video merge + Full format dump</p>
   <div class="base-url">
     <span id="base-url-text"></span>
-    <button onclick="copyBase()" id="base-copy" title="Copy">📋</button>
+    <button onclick="copyBase()" id="base-copy" title="Copy">&#x1f4cb;</button>
   </div>
 </div>
 
 <!-- Content -->
 <div class="container">
-  <a href="/" class="back-link">← Back to WebUI</a>
+  <a href="/" class="back-link">&larr; Back to WebUI</a>
 
-  <!-- ═══ AUDIO ═══ -->
+  <!-- AUDIO -->
   <div class="section">
-    <div class="section-title"><span class="sec-icon audio">🔊</span> Audio</div>
+    <div class="section-title"><span class="sec-icon audio">&#x1f50a;</span> Audio</div>
 
     <div class="ep-card" data-ep="audio-post">
       <div class="ep-head" onclick="toggle(this)">
@@ -145,13 +161,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
         <h4>Request Body</h4>
         <table class="params">
           <tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr>
-          <tr><td>url<span class="req">REQ</span></td><td>string</td><td>—</td><td>Video/audio URL</td></tr>
+          <tr><td>url<span class="req">REQ</span></td><td>string</td><td>&mdash;</td><td>Video/audio URL</td></tr>
           <tr><td>preset</td><td>string</td><td>"128k"</td><td>48k | 64k | 128k | 320k</td></tr>
         </table>
         <h4>Example Request</h4>
         <pre><button class="ep-copy" onclick="copyCmd(this)">Copy</button><span class="c"># Audio @ 128k MP3</span>
-curl -X POST <span class="s">{{BASE}}</span>/api/audio \
-  -H <span class="s">"Content-Type: application/json"</span> \
+curl -X POST <span class="s">{{BASE}}</span>/api/audio \\
+  -H <span class="s">"Content-Type: application/json"</span> \\
   -d <span class="s">'{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "preset": "128k"}'</span></pre>
         <h4>Response</h4>
         <pre>{
@@ -219,9 +235,9 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
     </div>
   </div>
 
-  <!-- ═══ VIDEO ═══ -->
+  <!-- VIDEO -->
   <div class="section">
-    <div class="section-title"><span class="sec-icon video">🎬</span> Video</div>
+    <div class="section-title"><span class="sec-icon video">&#x1f3ac;</span> Video</div>
 
     <div class="ep-card" data-ep="video-info">
       <div class="ep-head" onclick="toggle(this)">
@@ -271,18 +287,18 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
         <h4>Request Body</h4>
         <table class="params">
           <tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr>
-          <tr><td>url<span class="req">REQ</span></td><td>string</td><td>—</td><td>Video URL</td></tr>
+          <tr><td>url<span class="req">REQ</span></td><td>string</td><td>&mdash;</td><td>Video URL</td></tr>
           <tr><td>format_id</td><td>string</td><td>null</td><td>e.g. "137+251" or blank for best</td></tr>
         </table>
         <h4>Example</h4>
         <pre><button class="ep-copy" onclick="copyCmd(this)">Copy</button><span class="c"># Best quality (auto-merge)</span>
-curl -X POST <span class="s">{{BASE}}</span>/api/video \
-  -H <span class="s">"Content-Type: application/json"</span> \
+curl -X POST <span class="s">{{BASE}}</span>/api/video \\
+  -H <span class="s">"Content-Type: application/json"</span> \\
   -d <span class="s">'{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'</span>
 
 <span class="c"># Specific format (1080p video + best audio)</span>
-curl -X POST <span class="s">{{BASE}}</span>/api/video \
-  -H <span class="s">"Content-Type: application/json"</span> \
+curl -X POST <span class="s">{{BASE}}</span>/api/video \\
+  -H <span class="s">"Content-Type: application/json"</span> \\
   -d <span class="s">'{"url": "...", "format_id": "137+251"}'</span></pre>
         <h4>Response</h4>
         <pre>{
@@ -346,9 +362,9 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
     </div>
   </div>
 
-  <!-- ═══ SYSTEM ═══ -->
+  <!-- SYSTEM -->
   <div class="section">
-    <div class="section-title"><span class="sec-icon sys">⚙️</span> System</div>
+    <div class="section-title"><span class="sec-icon sys">&#x2699;&#xfe0f;</span> System</div>
 
     <div class="ep-card" data-ep="sys-status">
       <div class="ep-head" onclick="toggle(this)">
@@ -425,17 +441,17 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
     </div>
   </div>
 
-  <!-- ═══ Status Flow ═══ -->
+  <!-- Status Flow -->
   <div class="section">
-    <div class="section-title">📊 Task Status Flow</div>
+    <div class="section-title">&#x1f4ca; Task Status Flow</div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;text-align:center">
       <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:14px">
         <span style="background:rgba(85,85,119,.2);color:var(--t3);padding:6px 14px;border-radius:20px;font-weight:600">queued</span>
-        <span style="color:var(--t3)">→</span>
+        <span style="color:var(--t3)">&rarr;</span>
         <span style="background:rgba(68,138,255,.12);color:var(--blue);padding:6px 14px;border-radius:20px;font-weight:600">downloading</span>
-        <span style="color:var(--t3)">→</span>
+        <span style="color:var(--t3)">&rarr;</span>
         <span style="background:rgba(255,215,64,.12);color:var(--yellow);padding:6px 14px;border-radius:20px;font-weight:600">processing</span>
-        <span style="color:var(--t3)">→</span>
+        <span style="color:var(--t3)">&rarr;</span>
         <span style="background:rgba(0,230,118,.12);color:var(--green);padding:6px 14px;border-radius:20px;font-weight:600">completed</span>
       </div>
       <div style="margin-top:10px;font-size:13px;color:var(--t3)">
@@ -451,37 +467,37 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
 
 <script>
 // Base URL
-const base = window.location.origin;
+var base = window.location.origin;
 document.getElementById('base-url-text').textContent = base;
 
 // Replace all {{BASE}} in pre blocks
-document.querySelectorAll('pre').forEach(pre => {
-  pre.innerHTML = pre.innerHTML.replace(/\{\{BASE\}\}/g, base);
+document.querySelectorAll('pre').forEach(function(pre) {
+  pre.innerHTML = pre.innerHTML.replace(/\\{\\{BASE\\}\\}/g, base);
 });
 
 // Toggle endpoint cards
 function toggle(head){
-  const card = head.closest('.ep-card');
+  var card = head.closest('.ep-card');
   card.classList.toggle('open');
 }
 
 // Copy base URL
 function copyBase(){
-  navigator.clipboard.writeText(base).then(()=>{
-    const btn = document.getElementById('base-copy');
-    btn.textContent = '\u2705';
-    setTimeout(()=>btn.textContent='\ud83d\udccb',1500);
+  navigator.clipboard.writeText(base).then(function(){
+    var btn = document.getElementById('base-copy');
+    btn.textContent = '\\u2705';
+    setTimeout(function(){ btn.textContent = '\\ud83d\\udccb'; }, 1500);
   });
 }
 
 // Copy curl command
 function copyCmd(btn){
-  const pre = btn.closest('pre');
-  const text = pre.textContent.replace('Copy','').trim();
-  navigator.clipboard.writeText(text).then(()=>{
-    btn.textContent = '\u2705 Copied';
+  var pre = btn.closest('pre');
+  var text = pre.textContent.replace('Copy','').trim();
+  navigator.clipboard.writeText(text).then(function(){
+    btn.textContent = '\\u2705 Copied';
     btn.classList.add('copied');
-    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},1500);
+    setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
   });
 }
 </script>
