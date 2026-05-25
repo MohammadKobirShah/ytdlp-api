@@ -1,432 +1,323 @@
 """
-yt-dlp wrapper + FFmpeg transcoding / merging / metadata embedding.
-All heavy work runs in a thread executor so the event-loop stays free.
+yt-dlp + FFmpeg wrapper — runs in a thread pool.
 """
 
 import asyncio
 import logging
+import os
 import re
 import shutil
-import time
 import unicodedata
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import yt_dlp
 
-from app.config import (
-    AUDIO_PRESETS,
-    DOWNLOAD_DIR,
-    DOWNLOAD_TIMEOUT_SECONDS,
-    FFMPEG_BIN,
-    TEMP_DIR,
-)
-from app.manager import TaskStatus, manager
+from app.config import AUDIO_PRESETS, COOKIES_FILE, DOWNLOAD_DIR, DOWNLOAD_TIMEOUT
+from app.manager import TaskStatus, TaskType, manager
 
-logger = logging.getLogger("ytdlp-api")
+logger = logging.getLogger("ytdlp-api.dl")
 
 
-# ═══════════════════════════════════════════════════════════
-#  INFO  –  full format dump
-# ═══════════════════════════════════════════════════════════
+# ─── Helpers ──────────────────────────────────────────────
 
-async def fetch_info(url: str) -> dict:
-    """Return full yt-dlp info dict (all formats)."""
+def _sanitize_filename(name: str) -> str:
+    name = unicodedata.normalize("NFC", name)
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name)
+    name = name.strip(". ")
+    return name[:200] or "download"
 
-    def run():
-        opts = {"quiet": True, "nowarnings": True, "socket_timeout": 30}
+
+def _sanitize_metadata(val: Any) -> str:
+    if val is None:
+        return ""
+    s = str(val).strip()
+    s = re.sub(r"[\x00-\x1f]", "", s)
+    return s[:500]
+
+
+def _cookies_args() -> List[str]:
+    """Return yt-dlp cookie args if cookies file exists."""
+    if COOKIES_FILE and os.path.isfile(COOKIES_FILE):
+        logger.info("Using cookies from %s", COOKIES_FILE)
+        return ["--cookies", COOKIES_FILE]
+    return []
+
+
+# ─── Info ─────────────────────────────────────────────────
+
+async def get_video_info(url: str) -> Dict:
+    loop = asyncio.get_running_loop()
+
+    def _run():
+        opts = {
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": False,
+            "forcejson": True,
+        }
+        extra = _cookies_args()
+        if extra:
+            opts["extra_args"] = extra
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            return ydl.sanitize_info(info)
+            return ydl.extract_info(url, download=False)
 
-    return await asyncio.get_running_loop().run_in_executor(None, run)
+    info = await loop.run_in_executor(None, _run)
+    if not info:
+        raise ValueError("No info extracted")
 
-
-def _clean_formats(info: dict) -> list:
-    """Return a lightweight format list for clients."""
-    fmts = []
-    for f in info.get("formats", []):
-        if not isinstance(f, dict):
-            continue
+    formats = []
+    for f in info.get("formats") or []:
         try:
-            fmts.append({
-                "format_id":   f.get("format_id"),
-                "ext":         f.get("ext"),
-                "resolution":  f.get("resolution") or str(f.get("height", "")),
-                "fps":         f.get("fps"),
-                "vcodec":      f.get("vcodec", "none"),
-                "acodec":      f.get("acodec", "none"),
-                "tbr":         f.get("tbr"),
-                "vbr":         f.get("vbr"),
-                "abr":         f.get("abr"),
-                "filesize":    f.get("filesize") or f.get("filesize_approx"),
-                "note":        f.get("format_note", ""),
+            if not isinstance(f, dict):
+                continue
+            formats.append({
+                "format_id":  str(f.get("format_id", "")),
+                "ext":        str(f.get("ext", "")),
+                "resolution": str(f.get("height", "") or ""),
+                "vcodec":     str(f.get("vcodec", "none")),
+                "acodec":     str(f.get("acodec", "none")),
+                "tbr":        f.get("tbr"),
+                "filesize":   f.get("filesize"),
             })
-        except Exception as exc:
-            logger.debug("Skipping malformed format entry: %s", exc)
-    return fmts
+        except Exception:
+            continue
 
-
-async def get_info_dump(url: str, include_raw: bool = False) -> dict:
-    info = await fetch_info(url)
-    result = {
-        "title":       info.get("title"),
-        "description": info.get("description"),
+    return {
+        "title":       info.get("title", ""),
         "duration":    info.get("duration"),
-        "thumbnail":   info.get("thumbnail"),
-        "uploader":    info.get("uploader"),
-        "artist":      info.get("artist") or info.get("uploader") or info.get("channel"),
-        "tags":        info.get("tags", []),
-        "categories":  info.get("categories", []),
-        "formats":     _clean_formats(info),
+        "thumbnail":   info.get("thumbnail", ""),
+        "artist":      info.get("artist") or info.get("uploader") or info.get("channel", ""),
+        "description": (info.get("description") or "")[:500],
+        "formats":     formats,
     }
+
+
+async def get_info_dump(url: str, include_raw: bool = False) -> Dict:
+    loop = asyncio.get_running_loop()
+
+    def _run():
+        opts = {"quiet": True, "no_warnings": True}
+        extra = _cookies_args()
+        if extra:
+            opts["extra_args"] = extra
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            return ydl.extract_info(url, download=False)
+
+    info = await loop.run_in_executor(None, _run)
     if include_raw:
-        result["raw"] = info
-    return result
+        return info
+    return {
+        "title":       info.get("title", ""),
+        "duration":    info.get("duration"),
+        "thumbnail":   info.get("thumbnail", ""),
+        "artist":      info.get("artist") or info.get("uploader") or "",
+        "description": (info.get("description") or "")[:500],
+        "formats":     info.get("formats", []),
+    }
 
 
-# ═══════════════════════════════════════════════════════════
-#  PROGRESS HOOK
-# ═══════════════════════════════════════════════════════════
+# ─── Progress hook ────────────────────────────────────────
 
 def _make_hook(task_id: str):
     def hook(d):
         if d["status"] == "downloading":
             total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
-            done  = d.get("downloaded_bytes", 0)
+            done  = d.get("downloaded_bytes") or 0
             pct   = (done / total * 100) if total else 0
-            manager.update(
-                task_id,
-                progress=round(pct, 1),
-                status=TaskStatus.DOWNLOADING,
-            )
+            manager.update(task_id, progress=min(pct, 99), status=TaskStatus.DOWNLOADING)
         elif d["status"] == "finished":
-            manager.update(task_id, progress=100)
+            manager.update(task_id, progress=99, status=TaskStatus.PROCESSING)
     return hook
 
 
-# ═══════════════════════════════════════════════════════════
-#  AUDIO  –  download → transcode → embed metadata
-# ═══════════════════════════════════════════════════════════
+# ─── Audio download ───────────────────────────────────────
 
 async def process_audio(task_id: str):
     task = manager.get(task_id)
     if not task:
         return
 
-    tmp = TEMP_DIR / task_id
+    preset = AUDIO_PRESETS.get(task.preset, AUDIO_PRESETS["128k"])
+    tmp = Path(DOWNLOAD_DIR) / "temp" / task_id
+    tmp.mkdir(parents=True, exist_ok=True)
 
     try:
-        await manager.acquire()
         manager.update(task_id, status=TaskStatus.DOWNLOADING, progress=0)
 
-        tmp.mkdir(parents=True, exist_ok=True)
+        loop = asyncio.get_running_loop()
 
-        # ── 1. Download best audio + thumbnail ────────────
-        def download():
+        def _run():
+            outtmpl = str(tmp / "audio.%(ext)s")
             opts = {
-                "format":          "bestaudio/best",
-                "outtmpl":         str(tmp / "src.%(ext)s"),
-                "quiet":           True,
-                "nowarnings":      True,
-                "write_thumbnail": True,
-                "socket_timeout":  30,
-                "progress_hooks":  [_make_hook(task_id)],
+                "format":        "bestaudio/best",
+                "outtmpl":       outtmpl,
+                "quiet":         True,
+                "no_warnings":   True,
+                "progress_hooks": [_make_hook(task_id)],
+                "postprocessors": [
+                    {
+                        "key": "FFmpegExtractAudio",
+                        "preferredcodec": "mp3",
+                        "preferredquality": preset["bitrate"].replace("k", ""),
+                    },
+                    {
+                        "key": "FFmpegMetadata",
+                        "add_metadata": True,
+                    },
+                    {
+                        "key": "EmbedThumbnail",
+                    },
+                ],
+                "postprocessor_args": {
+                    "ExtractAudio": [
+                        "-ar", str(preset["sample_rate"]),
+                        "-ac", str(preset["channels"]),
+                    ],
+                },
+                "writethumbnail": True,
             }
+            extra = _cookies_args()
+            if extra:
+                opts["extra_args"] = extra
+
             with yt_dlp.YoutubeDL(opts) as ydl:
-                return ydl.extract_info(task.url, download=True)
+                info = ydl.extract_info(task.url, download=True)
 
-        try:
-            info = await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(None, download),
-                timeout=DOWNLOAD_TIMEOUT_SECONDS,
-            )
-        except asyncio.TimeoutError:
-            raise RuntimeError(
-                f"Download exceeded {DOWNLOAD_TIMEOUT_SECONDS}s timeout"
-            )
+            title  = info.get("title", task_id) if info else task_id
+            artist = (info.get("artist") or info.get("uploader") or "") if info else ""
+            dur    = info.get("duration") if info else None
+            thumb  = info.get("thumbnail") if info else ""
 
-        title       = info.get("title", "unknown")
-        artist      = (
-            info.get("artist")
-            or info.get("uploader")
-            or info.get("channel")
-            or "Unknown"
-        )
-        description = info.get("description") or ""
-        thumb_url   = info.get("thumbnail") or ""
-        duration    = info.get("duration")
+            mp3s = list(tmp.glob("*.mp3"))
+            if not mp3s:
+                raise FileNotFoundError("MP3 not found after processing")
 
-        manager.update(
-            task_id,
-            title=title,
-            artist=artist,
-            description=description,
-            thumbnail_url=thumb_url,
-            duration=duration,
-            status=TaskStatus.PROCESSING,
-        )
+            mp3 = mp3s[0]
+            safe_name = _sanitize_filename(title)
+            fname = f"{safe_name} [{task.preset}].mp3"
+            dest  = Path(DOWNLOAD_DIR) / fname
+            shutil.move(str(mp3), str(dest))
 
-        # ── 2. Locate source file & thumbnail ─────────────
-        src_file = _find_file(
-            tmp, "src", exclude_ext={".jpg", ".jpeg", ".png", ".webp"}
-        )
-        thumb_file = _find_file(
-            tmp, exclude_name="src", only_ext={".jpg", ".jpeg", ".png", ".webp"}
+            return {
+                "title":         title,
+                "artist":        artist,
+                "duration":      dur,
+                "thumbnail_url": thumb,
+                "filename":      fname,
+                "filepath":      str(dest),
+                "file_size":     dest.stat().st_size,
+            }
+
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, _run),
+            timeout=DOWNLOAD_TIMEOUT,
         )
 
-        if not src_file:
-            raise RuntimeError("Downloaded audio file not found")
-
-        out_file = DOWNLOAD_DIR / f"{task_id}.mp3"
-        preset   = AUDIO_PRESETS[task.preset]
-
-        # ── 3. Transcode + embed metadata (single FFmpeg pass) ─
-        await _transcode_audio_with_metadata(
-            src=str(src_file),
-            out=str(out_file),
-            thumb=str(thumb_file) if thumb_file else None,
-            bitrate=preset["bitrate"],
-            sample_rate=preset["sample_rate"],
-            channels=preset["channels"],
-            title=title,
-            artist=artist,
-            description=description,
-        )
-
-        fsize = out_file.stat().st_size if out_file.exists() else 0
         manager.update(
             task_id,
             status=TaskStatus.COMPLETED,
-            filepath=str(out_file),
-            filename=_sanitize(f"{title} [{task.preset}].mp3"),
-            file_size=fsize,
-            completed_at=time.time(),
             progress=100,
+            title=result["title"],
+            artist=result["artist"],
+            duration=result["duration"],
+            thumbnail_url=result["thumbnail_url"],
+            filename=result["filename"],
+            filepath=result["filepath"],
+            file_size=result["file_size"],
         )
-        logger.info("Audio done %s  → %s  %dB", task_id, out_file, fsize)
+        logger.info("Audio done %s  -> %s  %sB", task_id, result["filepath"], result["file_size"])
 
     except Exception as exc:
-        logger.exception("Audio failed %s", task_id)
-        manager.update(task_id, status=TaskStatus.FAILED, error=str(exc))
+        logger.error("Audio failed %s: %s", task_id, exc)
+        manager.update(task_id, status=TaskStatus.FAILED, error=str(exc)[:500])
+
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-        manager.release()
 
 
-# ═══════════════════════════════════════════════════════════
-#  VIDEO  –  download best v+a → merge (copy) → embed meta
-# ═══════════════════════════════════════════════════════════
+# ─── Video download ───────────────────────────────────────
 
 async def process_video(task_id: str):
     task = manager.get(task_id)
     if not task:
         return
 
-    tmp = TEMP_DIR / task_id
+    tmp = Path(DOWNLOAD_DIR) / "temp" / task_id
+    tmp.mkdir(parents=True, exist_ok=True)
 
     try:
-        await manager.acquire()
         manager.update(task_id, status=TaskStatus.DOWNLOADING, progress=0)
 
-        tmp.mkdir(parents=True, exist_ok=True)
+        fmt = f"{task.format_id}+bestaudio/best" if task.format_id else "bestvideo+bestaudio/best"
+        loop = asyncio.get_running_loop()
 
-        fmt = task.format_id or "bestvideo+bestaudio/best"
-
-        def download():
+        def _run():
+            outtmpl = str(tmp / "video.%(ext)s")
             opts = {
-                "format":               fmt,
-                "outtmpl":              str(tmp / "src.%(ext)s"),
-                "quiet":                True,
-                "nowarnings":           True,
-                "write_thumbnail":      True,
-                "merge_output_format":  "mp4",
-                "embed_metadata":       True,
-                "embed_thumbnail":      True,
-                "socket_timeout":       30,
-                "postprocessor_args":   {"ffmpeg": ["-c", "copy"]},
-                "progress_hooks":       [_make_hook(task_id)],
+                "format":         fmt,
+                "merge_output_format": "mp4",
+                "outtmpl":        outtmpl,
+                "quiet":          True,
+                "no_warnings":    True,
+                "progress_hooks": [_make_hook(task_id)],
+                "postprocessors": [
+                    {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"},
+                    {"key": "FFmpegMetadata", "add_metadata": True},
+                ],
             }
+            extra = _cookies_args()
+            if extra:
+                opts["extra_args"] = extra
+
             with yt_dlp.YoutubeDL(opts) as ydl:
-                return ydl.extract_info(task.url, download=True)
+                info = ydl.extract_info(task.url, download=True)
 
-        try:
-            info = await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(None, download),
-                timeout=DOWNLOAD_TIMEOUT_SECONDS,
-            )
-        except asyncio.TimeoutError:
-            raise RuntimeError(
-                f"Download exceeded {DOWNLOAD_TIMEOUT_SECONDS}s timeout"
-            )
+            title = info.get("title", task_id) if info else task_id
+            dur   = info.get("duration") if info else None
+            thumb = info.get("thumbnail") if info else ""
 
-        title       = info.get("title", "unknown")
-        thumb_url   = info.get("thumbnail") or ""
-        duration    = info.get("duration")
-        artist      = (
-            info.get("artist")
-            or info.get("uploader")
-            or info.get("channel")
-            or ""
-        )
-        description = info.get("description") or ""
+            vids = list(tmp.glob("video.*"))
+            if not vids:
+                raise FileNotFoundError("Video not found after download")
 
-        manager.update(
-            task_id,
-            title=title,
-            thumbnail_url=thumb_url,
-            duration=duration,
-            artist=artist,
-            description=description,
-            status=TaskStatus.PROCESSING,
+            vid = vids[0]
+            safe_name = _sanitize_filename(title)
+            ext  = vid.suffix or ".mp4"
+            fname = f"{safe_name}{ext}"
+            dest  = Path(DOWNLOAD_DIR) / fname
+            shutil.move(str(vid), str(dest))
+
+            return {
+                "title":         title,
+                "duration":      dur,
+                "thumbnail_url": thumb,
+                "filename":      fname,
+                "filepath":      str(dest),
+                "file_size":     dest.stat().st_size,
+            }
+
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, _run),
+            timeout=DOWNLOAD_TIMEOUT,
         )
 
-        # ── Locate merged file ────────────────────────────
-        merged = _find_file(tmp, "src", only_ext={".mp4", ".mkv", ".webm"})
-        if not merged:
-            merged = _find_file(
-                tmp, "src", exclude_ext={".jpg", ".jpeg", ".png", ".webp"}
-            )
-        if not merged:
-            raise RuntimeError("Merged video file not found")
-
-        final = DOWNLOAD_DIR / f"{task_id}{merged.suffix}"
-        shutil.move(str(merged), str(final))
-
-        fsize = final.stat().st_size if final.exists() else 0
         manager.update(
             task_id,
             status=TaskStatus.COMPLETED,
-            filepath=str(final),
-            filename=_sanitize(f"{title}{final.suffix}"),
-            file_size=fsize,
-            completed_at=time.time(),
             progress=100,
+            title=result["title"],
+            duration=result["duration"],
+            thumbnail_url=result["thumbnail_url"],
+            filename=result["filename"],
+            filepath=result["filepath"],
+            file_size=result["file_size"],
         )
-        logger.info("Video done %s  → %s  %dB", task_id, final, fsize)
+        logger.info("Video done %s  -> %s  %sB", task_id, result["filepath"], result["file_size"])
 
     except Exception as exc:
-        logger.exception("Video failed %s", task_id)
-        manager.update(task_id, status=TaskStatus.FAILED, error=str(exc))
+        logger.error("Video failed %s: %s", task_id, exc)
+        manager.update(task_id, status=TaskStatus.FAILED, error=str(exc)[:500])
+
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-        manager.release()
-
-
-# ═══════════════════════════════════════════════════════════
-#  FFmpeg helpers
-# ═══════════════════════════════════════════════════════════
-
-def _sanitize_metadata_value(value: str, max_len: int = 1000) -> str:
-    """Remove characters that could corrupt FFmpeg metadata args."""
-    if not value:
-        return ""
-    value = value.replace("\n", " ").replace("\r", " ").replace("\x00", "")
-    value = value.replace("=", "\\=").replace(";", "\\;")
-    return value[:max_len]
-
-
-async def _transcode_audio_with_metadata(
-    src: str,
-    out: str,
-    thumb: Optional[str],
-    bitrate: str,
-    sample_rate: int,
-    channels: int,
-    title: str,
-    artist: str,
-    description: str,
-):
-    """
-    Single-pass: transcode to MP3 + embed all tags + thumbnail.
-    """
-    cmd = [
-        FFMPEG_BIN, "-y",
-        "-i", src,
-    ]
-    if thumb and Path(thumb).exists():
-        cmd += [
-            "-i", thumb,
-            "-map", "0:a",
-            "-map", "1:v",
-            "-c:v", "mjpeg",
-            "-disposition:v", "attached_pic",
-        ]
-    else:
-        cmd += ["-vn"]
-
-    cmd += [
-        "-c:a",           "libmp3lame",
-        "-b:a",           bitrate,
-        "-ar",            str(sample_rate),
-        "-ac",            str(channels),
-        "-metadata",      f"title={_sanitize_metadata_value(title)}",
-        "-metadata",      f"artist={_sanitize_metadata_value(artist)}",
-        "-metadata",      f"album={_sanitize_metadata_value(title)}",
-        "-metadata",      f"comment={_sanitize_metadata_value(description, 500)}",
-        "-id3v2_version", "3",
-        out,
-    ]
-
-    logger.debug("FFmpeg cmd: %s", " ".join(cmd))
-
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    _, stderr = await proc.communicate()
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"FFmpeg failed ({proc.returncode}): "
-            f"{stderr.decode(errors='replace')[-500:]}"
-        )
-
-
-# ═══════════════════════════════════════════════════════════
-#  Utility
-# ═══════════════════════════════════════════════════════════
-
-def _find_file(
-    directory: Path,
-    prefix: str = "",
-    exclude_name: str = "",
-    only_ext: set = None,
-    exclude_ext: set = None,
-) -> Optional[Path]:
-    resolved_dir = directory.resolve()
-    for f in sorted(directory.iterdir()):
-        if not f.is_file():
-            continue
-        # Verify file is within expected directory
-        try:
-            f.resolve().relative_to(resolved_dir)
-        except ValueError:
-            logger.warning("Skipping file outside expected dir: %s", f)
-            continue
-        if prefix and not f.name.startswith(prefix):
-            continue
-        if exclude_name and f.name.startswith(exclude_name):
-            continue
-        if only_ext and f.suffix.lower() not in only_ext:
-            continue
-        if exclude_ext and f.suffix.lower() in exclude_ext:
-            continue
-        return f
-    return None
-
-
-def _sanitize(name: str) -> str:
-    """Remove filesystem-unsafe characters, normalize unicode."""
-    name = unicodedata.normalize("NFC", name)
-    name = re.sub(r'[<>:"/\\|?\x00-\x1f\x7f]', '', name)
-    name = name.strip(". ")
-    name = re.sub(r'_{2,}', '_', name)
-    if len(name) > 200:
-        dot = name.rfind('.')
-        if dot > 0:
-            stem, ext = name[:dot], name[dot:]
-            name = stem[:200 - len(ext)] + ext
-        else:
-            name = name[:200]
-    return name or "download"
