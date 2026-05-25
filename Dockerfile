@@ -4,14 +4,18 @@ FROM python:3.12-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ffmpeg \
         curl \
+        unzip \
         ca-certificates \
     && curl -fsSL \
         https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
         -o /usr/local/bin/cloudflared \
     && chmod +x /usr/local/bin/cloudflared \
-    && apt-get purge -y curl \
+    && curl -fsSL https://deno.land/install.sh | sh \
+    && mv /root/.deno/bin/deno /usr/local/bin/deno \
+    && chmod +x /usr/local/bin/deno \
+    && apt-get purge -y curl unzip \
     && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* /tmp/*
 
 # ─── Python deps ──────────────────────────────────────────
 WORKDIR /app
