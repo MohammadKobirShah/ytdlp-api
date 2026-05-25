@@ -1,6 +1,6 @@
 fastapi==0.136.1
 uvicorn[standard]==0.47.0
-yt-dlp==2026.3.17
+# yt-dlp installed via Dockerfile nightly upgrade (yt-dlp-nightly)
 python-multipart==0.0.20
 aiofiles==24.1.0
 
