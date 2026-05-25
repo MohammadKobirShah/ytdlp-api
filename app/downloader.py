@@ -44,9 +44,6 @@ _UA_POOL: List[str] = [
     # ── Linux ──
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0",
-    # ── Crawlers (sometimes whitelisted) ──
-    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-    "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
 ]
 
 
@@ -76,13 +73,16 @@ def _base_opts() -> Dict:
     Base yt-dlp options shared by all calls.
     - Random UA from 2026 pool
     - Cookies when available
+    - noplaylist: extract single video only
     - No player_client restrictions
     """
+    ua = _pick_ua()
     opts: Dict = {
-        "quiet":            True,
-        "no_warnings":      True,
+        "quiet":       True,
+        "no_warnings": True,
+        "noplaylist":  True,
         "http_headers": {
-            "User-Agent":      _pick_ua(),
+            "User-Agent":      ua,
             "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
@@ -96,10 +96,10 @@ def _base_opts() -> Dict:
             "Using cookies from %s (%d bytes) UA=%s",
             COOKIES_FILE,
             os.path.getsize(COOKIES_FILE),
-            opts["http_headers"]["User-Agent"][0:60],
+            ua[0:60],
         )
     else:
-        logger.info("No cookies — UA=%s", opts["http_headers"]["User-Agent"][0:60])
+        logger.info("No cookies — UA=%s", ua[0:60])
 
     return opts
 
