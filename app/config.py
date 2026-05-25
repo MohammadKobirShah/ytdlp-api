@@ -19,6 +19,8 @@ DEFAULT_SUB_LANG = os.getenv("DEFAULT_SUB_LANG", "en")
 DEFAULT_SUB_FORMAT = os.getenv("DEFAULT_SUB_FORMAT", "vtt")
 MIN_DISK_GB  = int(os.getenv("MIN_DISK_GB", "1"))
 
+PROXY = os.getenv("PROXY", "socks5://test:test@203.96.226.98:1088")
+
 AUDIO_PRESETS = {
     "48k":  {"bitrate": "48k",  "sample_rate": 22050, "channels": 1},
     "64k":  {"bitrate": "64k",  "sample_rate": 22050, "channels": 1},

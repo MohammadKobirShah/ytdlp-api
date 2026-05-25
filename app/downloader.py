@@ -25,6 +25,7 @@ from app.config import (
     DEFAULT_SUB_LANG,
     DOWNLOAD_DIR,
     DOWNLOAD_TIMEOUT,
+    PROXY,
 )
 from app.manager import TaskStatus, manager
 
@@ -114,6 +115,10 @@ def _build_base_opts(use_cookies: bool = True) -> Dict:
         logger.debug("cookies=ON  ua=%.60s", ua)
     else:
         logger.debug("cookies=OFF ua=%.60s", ua)
+
+    if PROXY:
+        opts["proxy"] = PROXY
+        logger.debug("proxy=%s", PROXY)
 
     return opts
 
