@@ -1,20 +1,4 @@
-"""
-Professional modern API documentation page.
-Served at /api/docs with dark theme and interactive examples.
-"""
-
-from fastapi import APIRouter
-from fastapi.responses import HTMLResponse
-
-router = APIRouter(tags=["docs"])
-
-
-@router.get("/api/docs", response_class=HTMLResponse)
-async def api_docs():
-    return _HTML
-
-
-_HTML = """<!DOCTYPE html>
+_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -166,8 +150,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
         </table>
         <h4>Example Request</h4>
         <pre><button class="ep-copy" onclick="copyCmd(this)">Copy</button><span class="c"># Audio @ 128k MP3</span>
-curl -X POST <span class="s">{{BASE}}</span>/api/audio \\
-  -H <span class="s">"Content-Type: application/json"</span> \\
+curl -X POST <span class="s">{{BASE}}</span>/api/audio \
+  -H <span class="s">"Content-Type: application/json"</span> \
   -d <span class="s">'{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "preset": "128k"}'</span></pre>
         <h4>Response</h4>
         <pre>{
@@ -292,13 +276,13 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
         </table>
         <h4>Example</h4>
         <pre><button class="ep-copy" onclick="copyCmd(this)">Copy</button><span class="c"># Best quality (auto-merge)</span>
-curl -X POST <span class="s">{{BASE}}</span>/api/video \\
-  -H <span class="s">"Content-Type: application/json"</span> \\
+curl -X POST <span class="s">{{BASE}}</span>/api/video \
+  -H <span class="s">"Content-Type: application/json"</span> \
   -d <span class="s">'{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'</span>
 
 <span class="c"># Specific format (1080p video + best audio)</span>
-curl -X POST <span class="s">{{BASE}}</span>/api/video \\
-  -H <span class="s">"Content-Type: application/json"</span> \\
+curl -X POST <span class="s">{{BASE}}</span>/api/video \
+  -H <span class="s">"Content-Type: application/json"</span> \
   -d <span class="s">'{"url": "...", "format_id": "137+251"}'</span></pre>
         <h4>Response</h4>
         <pre>{
@@ -485,8 +469,8 @@ function toggle(head){
 function copyBase(){
   navigator.clipboard.writeText(base).then(()=>{
     const btn = document.getElementById('base-copy');
-    btn.textContent = '✓';
-    setTimeout(()=>btn.textContent='📋',1500);
+    btn.textContent = '\u2705';
+    setTimeout(()=>btn.textContent='\ud83d\udccb',1500);
   });
 }
 
@@ -495,7 +479,7 @@ function copyCmd(btn){
   const pre = btn.closest('pre');
   const text = pre.textContent.replace('Copy','').trim();
   navigator.clipboard.writeText(text).then(()=>{
-    btn.textContent = '✓ Copied';
+    btn.textContent = '\u2705 Copied';
     btn.classList.add('copied');
     setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},1500);
   });
