@@ -23,9 +23,9 @@ _HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>YTDLP</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f3b5;</text></svg>">
 <style>
-/* ═══ Variables ═══ */
+/* Variables */
 :root{
   --bg:#0a0a1a;--bg2:#111128;--card:#1a1a3e;--card2:#222255;
   --input:#151530;--grad:linear-gradient(135deg,#667eea,#764ba2);
@@ -41,7 +41,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased}
 
-/* ═══ Layout ═══ */
+/* Layout */
 #app{display:flex;flex-direction:column;height:100%;max-width:520px;margin:0 auto;position:relative}
 header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;
   background:rgba(10,10,26,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
@@ -55,7 +55,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:16px 16px 24px}
 .page{display:none;animation:fadeIn .3s ease}.page.active{display:block}
 
-/* ═══ Icons ═══ */
+/* Icons */
 .ic{display:inline-flex;align-items:center;justify-content:center}
 .ic svg{width:100%;height:100%}
 .ic-sm{width:18px;height:18px}
@@ -63,7 +63,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .ic-lg{width:48px;height:48px}
 .ic-xl{width:64px;height:64px}
 
-/* ═══ Input Section ═══ */
+/* Input Section */
 .input-section{margin-bottom:20px}
 .input-row{display:flex;gap:8px;margin-bottom:10px}
 .input-row input{flex:1;background:var(--input);border:1.5px solid var(--border);
@@ -82,14 +82,14 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .btn-fetch:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .btn-fetch:not(:disabled):active{transform:scale(.97)}
 
-/* ═══ Skeleton ═══ */
+/* Skeleton */
 .skeleton{background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);
   background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--rx)}
 .skel-thumb{width:100%;padding-top:56.25%;border-radius:var(--rs);margin-bottom:12px}
 .skel-line{height:16px;border-radius:4px;margin-bottom:8px}
 .skel-line.w80{width:80%}.skel-line.w60{width:60%}
 
-/* ═══ Preview Card ═══ */
+/* Preview Card */
 .preview-card{background:var(--card);border-radius:var(--r);overflow:hidden;
   margin-bottom:20px;border:1px solid var(--border);animation:slideUp .4s ease}
 .thumb-wrap{position:relative;width:100%;padding-top:56.25%;background:var(--bg2);overflow:hidden}
@@ -103,7 +103,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
   margin-bottom:4px}
 .preview-info p{font-size:13px;color:var(--t2)}
 
-/* ═══ Mode Tabs ═══ */
+/* Mode Tabs */
 .mode-section{margin-bottom:16px}
 .mode-tabs{display:flex;background:var(--card);border-radius:var(--rs);padding:3px;position:relative}
 .mode-tab{flex:1;padding:10px;text-align:center;cursor:pointer;z-index:1;position:relative;
@@ -115,7 +115,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
   background:var(--grad);border-radius:8px;transition:transform .3s ease}
 .mode-ind.right{transform:translateX(100%)}
 
-/* ═══ Audio Presets ═══ */
+/* Audio Presets */
 .preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .preset-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--rs);
   padding:16px 12px;text-align:center;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
@@ -133,7 +133,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .preset-card.selected .p-check{display:flex}
 .preset-card .p-check svg{width:12px;height:12px;color:#fff}
 
-/* ═══ Video Formats ═══ */
+/* Video Formats */
 .fmt-list{display:flex;flex-direction:column;gap:8px}
 .fmt-row{display:flex;align-items:center;gap:12px;background:var(--card);
   border:1.5px solid var(--border);border-radius:var(--rs);padding:12px 14px;
@@ -150,7 +150,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
   background:rgba(102,126,234,.15);color:var(--accent2);text-transform:uppercase}
 .fmt-row.selected .fmt-badge{background:var(--accent);color:#fff}
 
-/* ═══ Download Button ═══ */
+/* Download Button */
 .dl-section{margin-top:20px}
 .btn-dl{width:100%;padding:16px;border:none;border-radius:var(--rs);background:var(--grad);
   color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;
@@ -160,7 +160,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .btn-dl.pulsing::after{content:'';position:absolute;inset:0;border-radius:inherit;
   animation:ripple 2s infinite;border:2px solid rgba(255,255,255,.3)}
 
-/* ═══ Progress ═══ */
+/* Progress */
 .progress-card{background:var(--card);border-radius:var(--rs);padding:16px;
   border:1px solid var(--border);margin-top:16px;animation:slideUp .3s ease}
 .progress-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
@@ -172,7 +172,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .progress-fill.complete{background:linear-gradient(90deg,var(--green),#00bfa5)}
 .progress-fill.failed{background:linear-gradient(90deg,var(--red),#ee5a24)}
 
-/* ═══ Downloads Page ═══ */
+/* Downloads Page */
 .page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .page-head h2{font-size:22px;font-weight:800}
 .dl-item{display:flex;align-items:center;gap:12px;background:var(--card);
@@ -203,13 +203,13 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .status-dot.completed{background:var(--green)}
 .status-dot.failed{background:var(--red)}
 
-/* ═══ Empty State ═══ */
+/* Empty State */
 .empty-state{text-align:center;padding:60px 20px;color:var(--t3)}
 .empty-state .empty-ic{width:72px;height:72px;margin:0 auto 16px;opacity:.3}
 .empty-state h3{font-size:16px;color:var(--t2);margin-bottom:6px;font-weight:600}
 .empty-state p{font-size:13px}
 
-/* ═══ Bottom Nav ═══ */
+/* Bottom Nav */
 #nav{display:flex;background:rgba(10,10,26,.95);backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);
   padding:6px 0 env(safe-area-inset-bottom,8px);z-index:10}
@@ -221,7 +221,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .nav-btn.active svg{transform:scale(1.1)}
 .nav-btn:active{transform:scale(.92)}
 
-/* ═══ Toast ═══ */
+/* Toast */
 #toasts{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;
   display:flex;flex-direction:column;gap:8px;max-width:400px;width:calc(100% - 32px)}
 .toast{padding:12px 16px;border-radius:var(--rs);font-size:13px;font-weight:600;
@@ -232,11 +232,11 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .toast.info{background:rgba(68,138,255,.15);color:var(--blue);border:1px solid rgba(68,138,255,.2)}
 .toast.out{animation:toastOut .3s ease forwards}
 
-/* ═══ Footer ═══ */
+/* Footer */
 .footer{text-align:center;padding:24px 0 8px;font-size:11px;color:var(--t3)}
 .footer a{color:var(--accent2);text-decoration:none}
 
-/* ═══ Animations ═══ */
+/* Animations */
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -247,17 +247,17 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .spinner{animation:spin 1s linear infinite}
 
-/* ═══ Responsive ═══ */
+/* Responsive */
 @media(min-width:768px){#app{max-width:520px;border-left:1px solid var(--border);border-right:1px solid var(--border)}}
 </style>
 </head>
 <body>
 <div id="app">
 
-<!-- ═══ Header ═══ -->
+<!-- Header -->
 <header>
   <div class="h-left">
-    <span class="logo">🎵</span>
+    <span class="logo">&#x1f3b5;</span>
     <span class="app-name">YTDLP</span>
   </div>
   <a href="/api/docs" class="h-right" title="API Docs">
@@ -265,10 +265,10 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
   </a>
 </header>
 
-<!-- ═══ Main ═══ -->
+<!-- Main -->
 <main>
 
-<!-- ─── Home Page ─── -->
+<!-- Home Page -->
 <section id="page-home" class="page active">
 
   <!-- URL Input -->
@@ -367,7 +367,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
   <div class="footer">Powered by <a href="/api/docs">yt-dlp</a></div>
 </section>
 
-<!-- ─── Downloads Page ─── -->
+<!-- Downloads Page -->
 <section id="page-downloads" class="page">
   <div class="page-head">
     <h2>Downloads</h2>
@@ -387,7 +387,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 
 </main>
 
-<!-- ═══ Bottom Nav ═══ -->
+<!-- Bottom Nav -->
 <nav id="nav">
   <button class="nav-btn active" data-tab="home">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
@@ -399,336 +399,331 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
   </button>
 </nav>
 
-<!-- ═══ Toasts ═══ -->
+<!-- Toasts -->
 <div id="toasts"></div>
 
 </div>
 
 <script>
-// ═══ State ═══
-const S = {
+// State
+var S = {
   tab:'home', mode:'audio', url:'', info:null, loading:false,
   preset:'128k', fmtId:null, fmts:[], task:null,
 };
-const polls = new Map();
+var polls = {};
 
-// ═══ DOM ═══
-const $ = id => document.getElementById(id);
-const urlInput = $('url-input');
-const btnPaste = $('btn-paste');
-const btnClear = $('btn-clear');
-const btnFetch = $('btn-fetch');
-const skel = $('loading-skeleton');
-const preview = $('preview');
-const modeSec = $('mode-section');
-const audioOpt = $('audio-options');
-const videoOpt = $('video-options');
-const dlSec = $('dl-section');
-const btnDl = $('btn-dl');
-const progSec = $('progress-section');
-const homeEmpty = $('home-empty');
+// DOM
+var urlInput = document.getElementById('url-input');
+var btnPaste = document.getElementById('btn-paste');
+var btnClear = document.getElementById('btn-clear');
+var btnFetch = document.getElementById('btn-fetch');
+var skel = document.getElementById('loading-skeleton');
+var preview = document.getElementById('preview');
+var modeSec = document.getElementById('mode-section');
+var audioOpt = document.getElementById('audio-options');
+var videoOpt = document.getElementById('video-options');
+var dlSec = document.getElementById('dl-section');
+var btnDl = document.getElementById('btn-dl');
+var progSec = document.getElementById('progress-section');
+var homeEmpty = document.getElementById('home-empty');
 
-// ═══ API ═══
-const API = {
-  async info(url){
-    const r = await fetch('/api/video/info?url='+encodeURIComponent(url)+'&include_raw=false');
-    if(!r.ok) throw new Error((await r.json().catch(()=>({})).then(e=>e.detail))||'Fetch failed');
-    return r.json();
+// API
+var API = {
+  info: function(url){
+    return fetch('/api/video/info?url='+encodeURIComponent(url)+'&include_raw=false')
+      .then(function(r){if(!r.ok) return r.json().then(function(e){throw new Error(e.detail||'Fetch failed')}); return r.json();});
   },
-  async audio(url,preset){
-    const r = await fetch('/api/audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,preset})});
-    if(!r.ok) throw new Error((await r.json().catch(()=>({})).then(e=>e.detail))||'Start failed');
-    return r.json();
+  audio: function(url,preset){
+    return fetch('/api/audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,preset:preset})})
+      .then(function(r){if(!r.ok) return r.json().then(function(e){throw new Error(e.detail||'Start failed')}); return r.json();});
   },
-  async video(url,format_id){
-    const b = {url}; if(format_id) b.format_id = format_id;
-    const r = await fetch('/api/video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-    if(!r.ok) throw new Error((await r.json().catch(()=>({})).then(e=>e.detail))||'Start failed');
-    return r.json();
+  video: function(url,format_id){
+    var b = {url:url}; if(format_id) b.format_id = format_id;
+    return fetch('/api/video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})
+      .then(function(r){if(!r.ok) return r.json().then(function(e){throw new Error(e.detail||'Start failed')}); return r.json();});
   },
-  async status(type,id){
-    const r = await fetch('/api/'+type+'/'+id+'/status');
-    if(!r.ok) throw new Error('Status failed');
-    return r.json();
+  status: function(type,id){
+    return fetch('/api/'+type+'/'+id+'/status').then(function(r){if(!r.ok) throw new Error('Status failed'); return r.json();});
   },
-  async tasks(){
-    const r = await fetch('/api/tasks');
-    if(!r.ok) throw new Error('Tasks failed');
-    return r.json();
+  tasks: function(){
+    return fetch('/api/tasks').then(function(r){if(!r.ok) throw new Error('Tasks failed'); return r.json();});
   },
-  async del(type,id){
-    const r = await fetch('/api/'+type+'/'+id,{method:'DELETE'});
-    if(!r.ok) throw new Error('Delete failed');
-    return r.json();
+  del: function(type,id){
+    return fetch('/api/'+type+'/'+id,{method:'DELETE'}).then(function(r){if(!r.ok) throw new Error('Delete failed'); return r.json();});
   }
 };
 
-// ═══ Render ═══
+// Render
 function renderPresets(){
-  const presets = [
+  var presets = [
     {id:'48k',label:'Low',sr:'22.0kHz',ch:'Mono'},
     {id:'64k',label:'Medium',sr:'22.0kHz',ch:'Mono'},
     {id:'128k',label:'HQ',sr:'44.1kHz',ch:'Stereo'},
     {id:'320k',label:'Best',sr:'48kHz',ch:'Stereo'},
   ];
-  $('preset-grid').innerHTML = presets.map(p => `
-    <div class="preset-card${S.preset===p.id?' selected':''}" data-preset="${p.id}">
-      <div class="p-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-      <div class="p-bitrate">${p.id}</div>
-      <div class="p-label">${p.label}</div>
-      <div class="p-detail">${p.sr} · ${p.ch}</div>
-    </div>
-  `).join('');
-  document.querySelectorAll('.preset-card').forEach(el => {
-    el.addEventListener('click', () => {
-      S.preset = el.dataset.preset;
-      renderPresets();
-    });
+  document.getElementById('preset-grid').innerHTML = presets.map(function(p){
+    return '<div class="preset-card'+(S.preset===p.id?' selected':'')+'" data-preset="'+p.id+'">'+
+      '<div class="p-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>'+
+      '<div class="p-bitrate">'+p.id+'</div>'+
+      '<div class="p-label">'+p.label+'</div>'+
+      '<div class="p-detail">'+p.sr+' &middot; '+p.ch+'</div></div>';
+  }).join('');
+  document.querySelectorAll('.preset-card').forEach(function(el){
+    el.addEventListener('click', function(){ S.preset=el.dataset.preset; renderPresets(); });
   });
 }
 
 function processFormats(formats){
-  const video = formats.filter(f => f.vcodec && f.vcodec !== 'none');
-  const only = video.filter(f => !f.acodec || f.acodec === 'none');
-  const src = only.length > 0 ? only : video;
-  const byH = {};
-  src.forEach(f => {
-    const h = parseInt(f.resolution) || 0;
+  var video = formats.filter(function(f){return f.vcodec && f.vcodec!=='none';});
+  var only = video.filter(function(f){return !f.acodec||f.acodec==='none';});
+  var src = only.length>0?only:video;
+  var byH = {};
+  src.forEach(function(f){
+    var h = parseInt(f.resolution)||0;
     if(!h) return;
-    if(!byH[h] || (f.tbr||0) > (byH[h].tbr||0)) byH[h] = f;
+    if(!byH[h]||(f.tbr||0)>(byH[h].tbr||0)) byH[h]=f;
   });
-  return Object.values(byH).sort((a,b) => (parseInt(b.resolution)||0) - (parseInt(a.resolution)||0));
+  return Object.values(byH).sort(function(a,b){return (parseInt(b.resolution)||0)-(parseInt(a.resolution)||0);});
 }
 
 function renderFormats(){
-  const fmts = S.fmts;
-  const list = $('fmt-list');
-  const empty = $('fmt-empty');
+  var fmts = S.fmts;
+  var list = document.getElementById('fmt-list');
+  var empty = document.getElementById('fmt-empty');
   if(!fmts.length){ list.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  list.innerHTML = fmts.map(f => {
-    const res = f.resolution || '?';
-    const ext = f.ext || '';
-    const codec = f.vcodec ? f.vcodec.split('.')[0].substring(0,6) : '';
-    const tbr = f.tbr ? Math.round(f.tbr)+'kbps' : '';
-    const size = f.filesize ? fmtSize(f.filesize) : '';
-    return `<div class="fmt-row${S.fmtId===f.format_id?' selected':''}" data-fid="${f.format_id}">
-      <div class="fmt-res">${res}p</div>
-      <div class="fmt-meta">
-        <span>${ext.toUpperCase()}${tbr?' · '+tbr:''}${size?' · '+size:''}</span>
-        <span class="fmt-codec">${codec}</span>
-      </div>
-      <span class="fmt-badge">${ext}</span>
-    </div>`;
+  list.innerHTML = fmts.map(function(f){
+    var res = f.resolution||'?';
+    var ext = f.ext||'';
+    var codec = f.vcodec?f.vcodec.split('.')[0].substring(0,6):'';
+    var tbr = f.tbr?Math.round(f.tbr)+'kbps':'';
+    var size = f.filesize?fmtSize(f.filesize):'';
+    return '<div class="fmt-row'+(S.fmtId===f.format_id?' selected':'')+'" data-fid="'+f.format_id+'">'+
+      '<div class="fmt-res">'+res+'p</div>'+
+      '<div class="fmt-meta"><span>'+ext.toUpperCase()+(tbr?' &middot; '+tbr:'')+(size?' &middot; '+size:'')+'</span>'+
+      '<span class="fmt-codec">'+codec+'</span></div>'+
+      '<span class="fmt-badge">'+ext+'</span></div>';
   }).join('');
-  document.querySelectorAll('.fmt-row').forEach(el => {
-    el.addEventListener('click', () => {
-      S.fmtId = el.dataset.fid;
-      renderFormats();
-    });
+  document.querySelectorAll('.fmt-row').forEach(function(el){
+    el.addEventListener('click', function(){ S.fmtId=el.dataset.fid; renderFormats(); });
   });
 }
 
 function renderDownloads(tasks){
-  const list = $('dl-list');
-  const empty = $('dl-empty');
+  var list = document.getElementById('dl-list');
+  var empty = document.getElementById('dl-empty');
   if(!tasks.length){ list.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  list.innerHTML = tasks.map(t => {
-    const isAudio = t.type === 'audio';
-    const iconSvg = isAudio
+  list.innerHTML = tasks.map(function(t){
+    var isAudio = t.type==='audio';
+    var iconSvg = isAudio
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
-    const statusLabel = {queued:'Queued',downloading:'Downloading',processing:'Processing',completed:'Done',failed:'Failed'}[t.status]||t.status;
-    const sub = [t.preset||t.format_id, t.file_size?fmtSize(t.file_size):'', statusLabel].filter(Boolean).join(' · ');
-    const dot = `<span class="status-dot ${t.status}"></span>`;
-    let actions = '';
-    if(t.status === 'completed'){
-      actions += `<button class="dl-btn dl-get" data-type="${t.type}" data-id="${t.task_id}" title="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>`;
+    var statusLabel = {queued:'Queued',downloading:'Downloading',processing:'Processing',completed:'Done',failed:'Failed'}[t.status]||t.status;
+    var sub = [t.preset||t.format_id, t.file_size?fmtSize(t.file_size):'', statusLabel].filter(Boolean).join(' &middot; ');
+    var dot = '<span class="status-dot '+t.status+'"></span>';
+    var actions = '';
+    if(t.status==='completed'){
+      actions += '<button class="dl-btn dl-get" data-type="'+t.type+'" data-id="'+t.task_id+'" data-fname="'+escAttr(t.filename||'')+'" title="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>';
     }
-    actions += `<button class="dl-btn dl-del" data-type="${t.type}" data-id="${t.task_id}" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
-    const prog = (t.status==='downloading'||t.status==='processing')
-      ? `<div class="dl-progress"><div class="progress-bar"><div class="progress-fill${t.status==='processing'?'':''}" style="width:${t.progress}%"></div></div></div>` : '';
-    const err = t.error ? `<p style="color:var(--red);font-size:11px;margin-top:2px">${escHtml(t.error.substring(0,80))}</p>` : '';
-    return `<div class="dl-item" data-id="${t.task_id}">
-      <div class="dl-icon ${isAudio?'audio':'video'}">${iconSvg}</div>
-      <div class="dl-info">
-        <h4>${escHtml(t.title||t.task_id)}</h4>
-        <p>${dot}${sub}</p>${prog}${err}
-      </div>
-      <div class="dl-actions">${actions}</div>
-    </div>`;
+    actions += '<button class="dl-btn dl-del" data-type="'+t.type+'" data-id="'+t.task_id+'" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
+    var prog = (t.status==='downloading'||t.status==='processing')
+      ? '<div class="dl-progress"><div class="progress-bar"><div class="progress-fill" style="width:'+t.progress+'%"></div></div></div>' : '';
+    var err = t.error ? '<p style="color:var(--red);font-size:11px;margin-top:2px">'+escHtml(t.error.substring(0,80))+'</p>' : '';
+    return '<div class="dl-item" data-id="'+t.task_id+'">'+
+      '<div class="dl-icon '+(isAudio?'audio':'video')+'">'+iconSvg+'</div>'+
+      '<div class="dl-info"><h4>'+escHtml(t.title||t.task_id)+'</h4>'+
+      '<p>'+dot+sub+'</p>'+prog+err+'</div>'+
+      '<div class="dl-actions">'+actions+'</div></div>';
   }).join('');
-  list.querySelectorAll('.dl-get').forEach(b => b.addEventListener('click', ()=>window.open('/api/'+b.dataset.type+'/'+b.dataset.id+'/download','_blank')));
-  list.querySelectorAll('.dl-del').forEach(b => b.addEventListener('click', async()=>{
-    try{await API.del(b.dataset.type,b.dataset.id);toast('Deleted','info');loadDownloads();}catch(e){toast('Delete failed','error');}
-  }));
+
+  // Force download using <a download> trick
+  list.querySelectorAll('.dl-get').forEach(function(b){
+    b.addEventListener('click', function(){
+      var url = '/api/'+b.dataset.type+'/'+b.dataset.id+'/download';
+      var fname = b.dataset.fname || (b.dataset.id + (b.dataset.type==='audio'?'.mp3':'.mp4'));
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = fname;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){ document.body.removeChild(a); }, 1000);
+      toast('Downloading to your device...','success');
+    });
+  });
+
+  list.querySelectorAll('.dl-del').forEach(function(b){
+    b.addEventListener('click', function(){
+      API.del(b.dataset.type, b.dataset.id).then(function(){
+        toast('Deleted','info'); loadDownloads();
+      }).catch(function(){ toast('Delete failed','error'); });
+    });
+  });
 }
 
-// ═══ Actions ═══
-async function handleFetch(){
-  const url = urlInput.value.trim();
+// Actions
+function handleFetch(){
+  var url = urlInput.value.trim();
   if(!url) return;
-  S.url = url; S.info = null; S.fmts = []; S.fmtId = null; S.task = null;
-  S.loading = true;
+  S.url=url; S.info=null; S.fmts=[]; S.fmtId=null; S.task=null;
+  S.loading=true;
   updateUI();
-  try{
-    const info = await API.info(url);
-    S.info = info;
-    S.fmts = processFormats(info.formats||[]);
-    S.fmtId = S.fmts.length ? S.fmts[0].format_id : null;
-    S.loading = false;
+  API.info(url).then(function(info){
+    S.info=info;
+    S.fmts=processFormats(info.formats||[]);
+    S.fmtId=S.fmts.length?S.fmts[0].format_id:null;
+    S.loading=false;
     updateUI();
-  }catch(e){
-    S.loading = false;
+  }).catch(function(e){
+    S.loading=false;
     updateUI();
     toast(e.message||'Failed to fetch info','error');
-  }
+  });
 }
 
-async function handleDownload(){
+function handleDownload(){
   if(!S.url) return;
-  btnDl.disabled = true;
+  btnDl.disabled=true;
   btnDl.classList.add('pulsing');
-  try{
-    let res;
-    if(S.mode === 'audio'){
-      res = await API.audio(S.url, S.preset);
-    } else {
-      res = await API.video(S.url, S.fmtId || null);
-    }
+  var p;
+  if(S.mode==='audio'){
+    p = API.audio(S.url, S.preset);
+  } else {
+    p = API.video(S.url, S.fmtId||null);
+  }
+  p.then(function(res){
     S.task = {id:res.task_id, type:S.mode};
     startPoll(res.task_id, S.mode);
-    progSec.style.display = 'block';
-    dlSec.style.display = 'none';
+    progSec.style.display='block';
+    dlSec.style.display='none';
     toast('Download started','info');
-  }catch(e){
-    btnDl.disabled = false;
+  }).catch(function(e){
+    btnDl.disabled=false;
     btnDl.classList.remove('pulsing');
     toast(e.message||'Failed to start download','error');
-  }
+  });
 }
 
 function updateUI(){
-  const hasInfo = !!S.info;
-  homeEmpty.style.display = hasInfo || S.loading ? 'none' : '';
-  skel.style.display = S.loading ? 'block' : 'none';
-  preview.style.display = hasInfo ? 'block' : 'none';
-  modeSec.style.display = hasInfo ? 'block' : 'none';
-  audioOpt.style.display = hasInfo && S.mode==='audio' ? 'block' : 'none';
-  videoOpt.style.display = hasInfo && S.mode==='video' ? 'block' : 'none';
-  dlSec.style.display = hasInfo && !S.task ? 'block' : 'none';
-  progSec.style.display = S.task ? 'block' : 'none';
+  var hasInfo = !!S.info;
+  homeEmpty.style.display = hasInfo||S.loading?'none':'';
+  skel.style.display = S.loading?'block':'none';
+  preview.style.display = hasInfo?'block':'none';
+  modeSec.style.display = hasInfo?'block':'none';
+  audioOpt.style.display = hasInfo&&S.mode==='audio'?'block':'none';
+  videoOpt.style.display = hasInfo&&S.mode==='video'?'block':'none';
+  dlSec.style.display = hasInfo&&!S.task?'block':'none';
+  progSec.style.display = S.task?'block':'none';
   if(hasInfo){
-    $('thumb-img').src = S.info.thumbnail||'';
-    $('preview-title').textContent = S.info.title||'Unknown';
-    $('preview-artist').textContent = [S.info.artist,S.info.duration?fmtDur(S.info.duration):''].filter(Boolean).join(' · ');
-    $('dur-badge').textContent = S.info.duration?fmtDur(S.info.duration):'';
+    document.getElementById('thumb-img').src = S.info.thumbnail||'';
+    document.getElementById('preview-title').textContent = S.info.title||'Unknown';
+    document.getElementById('preview-artist').textContent = [S.info.artist, S.info.duration?fmtDur(S.info.duration):''].filter(Boolean).join(' &middot; ');
+    document.getElementById('dur-badge').textContent = S.info.duration?fmtDur(S.info.duration):'';
     renderPresets();
     renderFormats();
   }
   if(!S.task){ btnDl.disabled=false; btnDl.classList.remove('pulsing'); }
 }
 
-// ═══ Polling ═══
+// Polling
 function startPoll(id,type){
-  if(polls.has(id)) return;
-  const iv = setInterval(async()=>{
-    try{
-      const s = await API.status(type,id);
+  if(polls[id]) return;
+  polls[id] = setInterval(function(){
+    API.status(type,id).then(function(s){
       updateProgress(s);
       if(s.status==='completed'){
         stopPoll(id);
         toast('Download complete!','success');
         btnDl.disabled=false; btnDl.classList.remove('pulsing');
-        setTimeout(()=>{ progSec.style.display='none'; S.task=null; dlSec.style.display='block'; },2000);
+        setTimeout(function(){ progSec.style.display='none'; S.task=null; dlSec.style.display='block'; },2000);
       } else if(s.status==='failed'){
         stopPoll(id);
         toast('Download failed: '+(s.error||'Unknown'),'error');
         btnDl.disabled=false; btnDl.classList.remove('pulsing');
-        $('p-fill').classList.add('failed');
+        document.getElementById('p-fill').classList.add('failed');
       }
-    }catch(e){ console.error('poll err',e); }
+    }).catch(function(e){ console.error('poll err',e); });
   },1000);
-  polls.set(id,iv);
 }
-function stopPoll(id){ const iv=polls.get(id); if(iv){clearInterval(iv);polls.delete(id);} }
+function stopPoll(id){ if(polls[id]){clearInterval(polls[id]);delete polls[id];} }
 function updateProgress(s){
-  const labels={queued:'Queued...',downloading:'Downloading...',processing:'Processing...',completed:'Complete!',failed:'Failed'};
-  $('p-status').textContent = labels[s.status]||s.status;
-  $('p-pct').textContent = Math.round(s.progress)+'%';
-  $('p-fill').style.width = s.progress+'%';
-  if(s.status==='completed') $('p-fill').classList.add('complete');
+  var labels={queued:'Queued...',downloading:'Downloading...',processing:'Processing...',completed:'Complete!',failed:'Failed'};
+  document.getElementById('p-status').textContent = labels[s.status]||s.status;
+  document.getElementById('p-pct').textContent = Math.round(s.progress)+'%';
+  document.getElementById('p-fill').style.width = s.progress+'%';
+  if(s.status==='completed') document.getElementById('p-fill').classList.add('complete');
 }
 
-// ═══ Downloads Page ═══
-async function loadDownloads(){
-  try{
-    const tasks = await API.tasks();
+// Downloads Page
+function loadDownloads(){
+  API.tasks().then(function(tasks){
     renderDownloads(tasks);
-    tasks.forEach(t=>{
+    tasks.forEach(function(t){
       if(t.status==='downloading'||t.status==='processing'||t.status==='queued'){
-        if(!polls.has(t.task_id)) startPoll(t.task_id,t.type);
+        if(!polls[t.task_id]) startPoll(t.task_id, t.type);
       }
     });
-  }catch(e){ toast('Failed to load downloads','error'); }
+  }).catch(function(){ toast('Failed to load downloads','error'); });
 }
 
-// ═══ Navigation ═══
+// Navigation
 function switchTab(tab){
-  S.tab = tab;
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  $('page-'+tab).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  S.tab=tab;
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('page-'+tab).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
   if(tab==='downloads') loadDownloads();
 }
 function switchMode(mode){
-  S.mode = mode;
-  document.querySelectorAll('.mode-tab').forEach(t=>t.classList.toggle('active',t.dataset.mode===mode));
-  $('mode-ind').classList.toggle('right',mode==='video');
+  S.mode=mode;
+  document.querySelectorAll('.mode-tab').forEach(function(t){t.classList.toggle('active',t.dataset.mode===mode);});
+  document.getElementById('mode-ind').classList.toggle('right',mode==='video');
   audioOpt.style.display = mode==='audio'?'block':'none';
   videoOpt.style.display = mode==='video'?'block':'none';
 }
 
-// ═══ Toast ═══
-function toast(msg,type='info'){
-  const el = document.createElement('div');
+// Toast
+function toast(msg,type){
+  type=type||'info';
+  var el = document.createElement('div');
   el.className = 'toast '+type;
-  const icons={success:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg>',
+  var icons={success:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg>',
     error:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
     info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'};
   el.innerHTML = (icons[type]||icons.info)+'<span>'+escHtml(msg)+'</span>';
-  $('toasts').appendChild(el);
-  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},3000);
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(function(){el.classList.add('out');setTimeout(function(){el.remove();},300);},3000);
 }
 
-// ═══ Utils ═══
-function fmtSize(b){if(!b)return'';const u=['B','KB','MB','GB'];let i=0;while(b>=1024&&i<u.length-1){b/=1024;i++;}return b.toFixed(i?1:0)+u[i];}
-function fmtDur(s){if(!s)return'';const m=Math.floor(s/60);const sec=Math.floor(s%60);return m+':'+(sec<10?'0':'')+sec;}
-function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+// Utils
+function fmtSize(b){if(!b)return'';var u=['B','KB','MB','GB'];var i=0;while(b>=1024&&i<u.length-1){b/=1024;i++;}return b.toFixed(i?1:0)+u[i];}
+function fmtDur(s){if(!s)return'';var m=Math.floor(s/60);var sec=Math.floor(s%60);return m+':'+(sec<10?'0':'')+sec;}
+function escHtml(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function escAttr(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// ═══ Events ═══
-urlInput.addEventListener('input',()=>{
-  const v = urlInput.value.trim();
+// Events
+urlInput.addEventListener('input', function(){
+  var v = urlInput.value.trim();
   btnFetch.disabled = !v;
-  btnClear.style.display = v ? 'flex' : 'none';
+  btnClear.style.display = v?'flex':'none';
 });
-btnPaste.addEventListener('click',async()=>{
-  try{const t=await navigator.clipboard.readText();urlInput.value=t;urlInput.dispatchEvent(new Event('input'));}catch(e){toast('Cannot read clipboard','error');}
+btnPaste.addEventListener('click', function(){
+  navigator.clipboard.readText().then(function(t){urlInput.value=t;urlInput.dispatchEvent(new Event('input'));}).catch(function(){toast('Cannot read clipboard','error');});
 });
-btnClear.addEventListener('click',()=>{
+btnClear.addEventListener('click', function(){
   urlInput.value='';urlInput.dispatchEvent(new Event('input'));
   S.info=null;S.fmts=[];S.fmtId=null;S.task=null;S.url='';
   updateUI();
 });
-btnFetch.addEventListener('click',handleFetch);
-btnDl.addEventListener('click',handleDownload);
-document.querySelectorAll('.mode-tab').forEach(t=>t.addEventListener('click',()=>switchMode(t.dataset.mode)));
-document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
-$('btn-refresh').addEventListener('click',loadDownloads);
-urlInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&urlInput.value.trim())handleFetch();});
+btnFetch.addEventListener('click', handleFetch);
+btnDl.addEventListener('click', handleDownload);
+document.querySelectorAll('.mode-tab').forEach(function(t){t.addEventListener('click',function(){switchMode(t.dataset.mode);});});
+document.querySelectorAll('.nav-btn').forEach(function(b){b.addEventListener('click',function(){switchTab(b.dataset.tab);});});
+document.getElementById('btn-refresh').addEventListener('click', loadDownloads);
+urlInput.addEventListener('keydown',function(e){if(e.key==='Enter'&&urlInput.value.trim())handleFetch();});
 
-// ═══ Init ═══
+// Init
 updateUI();
 </script>
 </body>
