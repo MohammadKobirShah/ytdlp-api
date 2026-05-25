@@ -39,6 +39,7 @@ BLOCKED_HOSTS = re.compile(
 class AudioRequest(BaseModel):
     url: str
     preset: str = "128k"
+    playlist: bool = False
 
     @field_validator("url")
     @classmethod
@@ -86,6 +87,7 @@ async def create_audio(req: AudioRequest):
         url=req.url,
         task_type=TaskType.AUDIO,
         preset=req.preset,
+        is_playlist=req.playlist,
     )
 
     asyncio.create_task(process_audio(task.id))

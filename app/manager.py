@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from app.config import CLEANUP_HOURS, DOWNLOAD_DIR, MAX_TASKS_IN_MEMORY
+from app.config import CLEANUP_HOURS, MAX_TASKS_IN_MEMORY
 
 logger = logging.getLogger("ytdlp-api")
 
@@ -21,6 +21,7 @@ logger = logging.getLogger("ytdlp-api")
 class TaskType(str, Enum):
     AUDIO = "audio"
     VIDEO = "video"
+    SUBTITLE = "subtitle"
 
 
 class TaskStatus(str, Enum):
@@ -37,6 +38,8 @@ class Task:
     url: str
     type: TaskType
     preset: Optional[str] = None
+    lang: Optional[str] = None
+    sub_format: Optional[str] = None
     format_id: Optional[str] = None
     status: TaskStatus = TaskStatus.QUEUED
     progress: float = 0.0
@@ -49,6 +52,9 @@ class Task:
     duration: Optional[float] = None
     file_size: Optional[int] = None
     error: Optional[str] = None
+    is_playlist: bool = False
+    entries_total: Optional[int] = None
+    entries_done: Optional[int] = None
     created_at: float = field(default_factory=time.time)
     completed_at: Optional[float] = None
 
@@ -76,6 +82,9 @@ class DownloadManager:
         task_type: TaskType,
         preset: Optional[str] = None,
         format_id: Optional[str] = None,
+        lang: Optional[str] = None,
+        sub_format: Optional[str] = None,
+        is_playlist: bool = False,
     ) -> Task:
         # Evict oldest completed/failed tasks if at capacity
         if len(self.tasks) >= MAX_TASKS_IN_MEMORY:
@@ -99,6 +108,9 @@ class DownloadManager:
             type=task_type,
             preset=preset,
             format_id=format_id,
+            lang=lang,
+            sub_format=sub_format,
+            is_playlist=is_playlist,
         )
         self.tasks[task_id] = task
         logger.info("Task created %s  type=%s  url=%s", task_id, task_type, url)

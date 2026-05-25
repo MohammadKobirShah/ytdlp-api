@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import PORT
 from app.tunnel import start_tunnel
 from app.manager import manager
-from app.routers import audio, video, system, webui, docs
+from app.routers import audio, video, system, subtitle, webui, docs
 
 # ─── Logging ──────────────────────────────────────────────
 logging.basicConfig(
@@ -77,4 +77,5 @@ app.include_router(webui.router)
 app.include_router(docs.router)
 app.include_router(audio.router)
 app.include_router(video.router)
+app.include_router(subtitle.router)
 app.include_router(system.router)

@@ -16,7 +16,16 @@ from typing import Any, Dict, List, Optional
 
 import yt_dlp
 
-from app.config import AUDIO_PRESETS, COOKIES_FILE, DOWNLOAD_DIR, DOWNLOAD_TIMEOUT
+import zipfile
+
+from app.config import (
+    AUDIO_PRESETS,
+    COOKIES_FILE,
+    DEFAULT_SUB_FORMAT,
+    DEFAULT_SUB_LANG,
+    DOWNLOAD_DIR,
+    DOWNLOAD_TIMEOUT,
+)
 from app.manager import TaskStatus, manager
 
 logger = logging.getLogger("ytdlp-api.dl")
@@ -149,21 +158,51 @@ def _extract_with_retry(
 
 # ─── Info — lightweight summary ───────────────────────────
 
-async def get_video_info(url: str) -> Dict:
+async def get_video_info(url: str, *, noplaylist: bool = True) -> Dict:
     """
     Return a lightweight summary dict.
-    Works for any single video URL on any yt-dlp supported site.
+    Works for any URL on any yt-dlp supported site.
+    When noplaylist=False, playlist/channel data is returned with entries.
     """
     loop = asyncio.get_running_loop()
 
     def _run() -> Dict:
-        extra = {"noplaylist": True}
-        info  = _extract_with_retry(url, extra, download=False)
+        extra: Dict = {}
+        if noplaylist:
+            extra["noplaylist"] = True
+        info = _extract_with_retry(url, extra, download=False)
         if not info:
             raise ValueError("yt-dlp returned no data")
         return info
 
     info = await loop.run_in_executor(None, _run)
+
+    # Playlist detection
+    if info.get("_type") == "playlist" or info.get("entries") is not None:
+        entries = []
+        for entry in (info.get("entries") or []):
+            if not entry:
+                continue
+            entries.append({
+                "id":        entry.get("id", ""),
+                "title":     entry.get("title", ""),
+                "thumbnail": entry.get("thumbnail", ""),
+                "duration":  entry.get("duration"),
+                "url":       entry.get("webpage_url") or entry.get("url", ""),
+                "extractor": entry.get("extractor", ""),
+            })
+        return {
+            "_type":          "playlist",
+            "id":             info.get("id", ""),
+            "title":          info.get("title", ""),
+            "thumbnail":      info.get("thumbnail") or (entries[0]["thumbnail"] if entries else ""),
+            "uploader":       info.get("uploader") or info.get("channel", ""),
+            "webpage_url":    info.get("webpage_url", url),
+            "extractor":      info.get("extractor", ""),
+            "playlist_count": info.get("playlist_count") or len(entries),
+            "entries":        entries,
+            "description":    (info.get("description") or "")[:500],
+        }
 
     formats: List[Dict] = []
     for f in info.get("formats") or []:
@@ -222,10 +261,41 @@ async def get_info_dump(
     info = await loop.run_in_executor(None, _run)
 
     if include_raw:
-        # Return everything yt-dlp knows — caller asked for the full dump.
         return info
 
-    # Safe summary — omit format stream URLs (can be signed / expiring).
+    # Playlist detection
+    if info.get("_type") == "playlist" or info.get("entries") is not None:
+        entries = []
+        for entry in (info.get("entries") or []):
+            if not entry:
+                continue
+            entries.append({
+                "id":        entry.get("id", ""),
+                "title":     entry.get("title", ""),
+                "thumbnail": entry.get("thumbnail", ""),
+                "duration":  entry.get("duration"),
+                "url":       entry.get("webpage_url") or entry.get("url", ""),
+                "extractor": entry.get("extractor", ""),
+                "uploader":  entry.get("uploader") or entry.get("channel", ""),
+            })
+        return {
+            "_type":          "playlist",
+            "id":             info.get("id", ""),
+            "title":          info.get("title", ""),
+            "thumbnail":      info.get("thumbnail") or (entries[0]["thumbnail"] if entries else ""),
+            "webpage_url":    info.get("webpage_url", url),
+            "original_url":   info.get("original_url", url),
+            "extractor":      info.get("extractor", ""),
+            "extractor_key":  info.get("extractor_key", ""),
+            "uploader":       info.get("uploader") or info.get("channel", ""),
+            "channel":        info.get("channel", ""),
+            "channel_url":    info.get("channel_url", ""),
+            "playlist_count": info.get("playlist_count") or len(entries),
+            "entries":        entries,
+            "description":    (info.get("description") or "")[:1000],
+        }
+
+    # Safe summary
     formats: List[Dict] = []
     for f in info.get("formats") or []:
         if not isinstance(f, dict):
@@ -249,42 +319,35 @@ async def get_info_dump(
         })
 
     return {
-        # ── Identity ──
-        "id":             info.get("id", ""),
-        "title":          info.get("title", ""),
-        "webpage_url":    info.get("webpage_url", url),
-        "original_url":   info.get("original_url", url),
-        "extractor":      info.get("extractor", ""),
-        "extractor_key":  info.get("extractor_key", ""),
-        # ── Media ──
-        "duration":       info.get("duration"),
-        "duration_string":info.get("duration_string", ""),
-        "thumbnail":      info.get("thumbnail", ""),
-        "thumbnails":     info.get("thumbnails", []),
-        # ── Uploader ──
-        "uploader":       info.get("uploader", ""),
-        "uploader_id":    info.get("uploader_id", ""),
-        "uploader_url":   info.get("uploader_url", ""),
-        "channel":        info.get("channel", ""),
-        "channel_id":     info.get("channel_id", ""),
-        "channel_url":    info.get("channel_url", ""),
-        # ── Stats ──
-        "view_count":     info.get("view_count"),
-        "like_count":     info.get("like_count"),
-        "comment_count":  info.get("comment_count"),
-        "age_limit":      info.get("age_limit"),
-        # ── Dates ──
-        "upload_date":    info.get("upload_date", ""),
-        "timestamp":      info.get("timestamp"),
-        # ── Content ──
-        "description":    info.get("description", ""),
-        "tags":           info.get("tags", []),
-        "categories":     info.get("categories", []),
-        "chapters":       info.get("chapters", []),
-        "subtitles":      list(info.get("subtitles", {}).keys()),
+        "id":                info.get("id", ""),
+        "title":             info.get("title", ""),
+        "webpage_url":       info.get("webpage_url", url),
+        "original_url":      info.get("original_url", url),
+        "extractor":         info.get("extractor", ""),
+        "extractor_key":     info.get("extractor_key", ""),
+        "duration":          info.get("duration"),
+        "duration_string":   info.get("duration_string", ""),
+        "thumbnail":         info.get("thumbnail", ""),
+        "thumbnails":        info.get("thumbnails", []),
+        "uploader":          info.get("uploader", ""),
+        "uploader_id":       info.get("uploader_id", ""),
+        "uploader_url":      info.get("uploader_url", ""),
+        "channel":           info.get("channel", ""),
+        "channel_id":        info.get("channel_id", ""),
+        "channel_url":       info.get("channel_url", ""),
+        "view_count":        info.get("view_count"),
+        "like_count":        info.get("like_count"),
+        "comment_count":     info.get("comment_count"),
+        "age_limit":         info.get("age_limit"),
+        "upload_date":       info.get("upload_date", ""),
+        "timestamp":         info.get("timestamp"),
+        "description":       info.get("description", ""),
+        "tags":              info.get("tags", []),
+        "categories":        info.get("categories", []),
+        "chapters":          info.get("chapters", []),
+        "subtitles":         list(info.get("subtitles", {}).keys()),
         "automatic_captions": list(info.get("automatic_captions", {}).keys()),
-        # ── Formats ──
-        "formats":        formats,
+        "formats":           formats,
     }
 
 
@@ -302,6 +365,97 @@ def _make_hook(task_id: str):
     return hook
 
 
+# ─── Subtitle download ────────────────────────────────────
+
+async def process_subtitle(task_id: str) -> None:
+    task = manager.get(task_id)
+    if not task:
+        return
+
+    lang = task.lang or DEFAULT_SUB_LANG
+    fmt  = task.sub_format or DEFAULT_SUB_FORMAT
+    tmp  = Path(DOWNLOAD_DIR) / "temp" / task_id
+    tmp.mkdir(parents=True, exist_ok=True)
+
+    try:
+        manager.update(task_id, status=TaskStatus.DOWNLOADING, progress=0)
+        loop = asyncio.get_running_loop()
+
+        def _run() -> Dict:
+            outtmpl = str(tmp / "subs.%(ext)s")
+
+            extra_opts: Dict = {
+                "noplaylist":          True,
+                "skip_download":       True,
+                "writesubtitles":      True,
+                "writeautomaticsubs":  True,
+                "subtitleslangs":      [lang],
+                "subtitlesformat":     fmt,
+                "outtmpl":             outtmpl,
+                "progress_hooks":      [_make_hook(task_id)],
+            }
+
+            info = _extract_with_retry(task.url, extra_opts, download=True)
+
+            title = _sanitize_filename((info.get("title") or task_id) if info else task_id)
+
+            # Find subtitle files
+            sub_files = sorted(tmp.glob(f"*.{fmt}"))
+            if not sub_files:
+                sub_files = sorted(tmp.glob("*.srt")) or sorted(tmp.glob("*.vtt"))
+            if not sub_files:
+                raise FileNotFoundError(f"No subtitle files found for language '{lang}'")
+
+            if len(sub_files) == 1:
+                ext = sub_files[0].suffix
+                fname = f"{title}.{lang}{ext}"
+                dest = Path(DOWNLOAD_DIR) / fname
+                shutil.move(str(sub_files[0]), str(dest))
+            else:
+                zip_name = f"{title}.{lang}.subs.zip"
+                zip_path = Path(DOWNLOAD_DIR) / zip_name
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for sf in sub_files:
+                        zf.write(sf, sf.name)
+                for sf in sub_files:
+                    sf.unlink(missing_ok=True)
+                dest = zip_path
+                fname = zip_name
+
+            return {
+                "title":         title,
+                "artist":        "",
+                "duration":      info.get("duration") if info else None,
+                "thumbnail_url": info.get("thumbnail") if info else "",
+                "filename":      fname,
+                "filepath":      str(dest),
+                "file_size":     dest.stat().st_size,
+            }
+
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, _run),
+            timeout=DOWNLOAD_TIMEOUT,
+        )
+
+        manager.update(
+            task_id,
+            status=TaskStatus.COMPLETED,
+            progress=100,
+            **result,
+        )
+        logger.info(
+            "subtitle done task=%s file=%s size=%d",
+            task_id, result["filepath"], result["file_size"],
+        )
+
+    except Exception as exc:
+        logger.error("subtitle failed task=%s: %s", task_id, exc, exc_info=True)
+        manager.update(task_id, status=TaskStatus.FAILED, error=str(exc)[:500])
+
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 # ─── Audio download ───────────────────────────────────────
 
 async def process_audio(task_id: str) -> None:
@@ -317,12 +471,19 @@ async def process_audio(task_id: str) -> None:
         manager.update(task_id, status=TaskStatus.DOWNLOADING, progress=0)
         loop = asyncio.get_running_loop()
 
+        is_playlist = task.is_playlist
+        playlist_tmp = tmp / "pl"
+        if is_playlist:
+            playlist_tmp.mkdir(parents=True, exist_ok=True)
+
         def _run() -> Dict:
-            outtmpl     = str(tmp / "audio.%(ext)s")
+            outtmpl = str(tmp / "audio.%(ext)s")
+            if is_playlist:
+                outtmpl = str(playlist_tmp / "%(playlist_title|Playlist)s" / "%(playlist_index)03d - %(title)s.%(ext)s")
+
             bitrate_num = preset["bitrate"].replace("k", "")
 
             extra_opts: Dict = {
-                "noplaylist":     True,
                 "format":         "bestaudio/best",
                 "outtmpl":        outtmpl,
                 "progress_hooks": [_make_hook(task_id)],
@@ -348,8 +509,56 @@ async def process_audio(task_id: str) -> None:
                     ],
                 },
             }
+            if not is_playlist:
+                extra_opts["noplaylist"] = True
 
             info = _extract_with_retry(task.url, extra_opts, download=True)
+
+            if is_playlist:
+                playlist_title = _sanitize_filename(info.get("title") or "Playlist") if info else "Playlist"
+                pl_dir = playlist_tmp / playlist_title
+                mp3s = []
+                if pl_dir.exists():
+                    mp3s = sorted(pl_dir.glob("*.mp3"))
+                if not mp3s:
+                    mp3s = list(playlist_tmp.rglob("*.mp3"))
+                if not mp3s:
+                    raise FileNotFoundError("No MP3 files found for playlist")
+
+                if len(mp3s) == 1:
+                    title = (info.get("title") or task_id) if info else task_id
+                    safe  = _sanitize_filename(title)
+                    fname = f"{safe} [{task.preset}].mp3"
+                    dest  = Path(DOWNLOAD_DIR) / fname
+                    shutil.move(str(mp3s[0]), str(dest))
+                    return {
+                        "title":         title,
+                        "artist":        info.get("uploader") or info.get("channel") or "" if info else "",
+                        "duration":      info.get("duration") if info else None,
+                        "thumbnail_url": info.get("thumbnail") if info else "",
+                        "filename":      fname,
+                        "filepath":      str(dest),
+                        "file_size":     dest.stat().st_size,
+                    }
+
+                zip_name = f"{playlist_title} [{task.preset}].zip"
+                zip_path = Path(DOWNLOAD_DIR) / zip_name
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for mp3 in mp3s:
+                        zf.write(mp3, mp3.name)
+                for mp3 in mp3s:
+                    mp3.unlink(missing_ok=True)
+
+                total_size = zip_path.stat().st_size
+                return {
+                    "title":         playlist_title,
+                    "artist":        info.get("uploader") or info.get("channel") or "" if info else "",
+                    "duration":      None,
+                    "thumbnail_url": info.get("thumbnail") if info else "",
+                    "filename":      zip_name,
+                    "filepath":      str(zip_path),
+                    "file_size":     total_size,
+                }
 
             title  = (info.get("title")   or task_id) if info else task_id
             artist = (
@@ -421,11 +630,17 @@ async def process_video(task_id: str) -> None:
         )
         loop = asyncio.get_running_loop()
 
+        is_playlist = task.is_playlist
+        playlist_tmp = tmp / "pl"
+        if is_playlist:
+            playlist_tmp.mkdir(parents=True, exist_ok=True)
+
         def _run() -> Dict:
             outtmpl = str(tmp / "video.%(ext)s")
+            if is_playlist:
+                outtmpl = str(playlist_tmp / "%(playlist_title|Playlist)s" / "%(playlist_index)03d - %(title)s.%(ext)s")
 
             extra_opts: Dict = {
-                "noplaylist":          True,
                 "format":              fmt,
                 "merge_output_format": "mp4",
                 "outtmpl":             outtmpl,
@@ -441,8 +656,57 @@ async def process_video(task_id: str) -> None:
                     },
                 ],
             }
+            if not is_playlist:
+                extra_opts["noplaylist"] = True
 
             info = _extract_with_retry(task.url, extra_opts, download=True)
+
+            if is_playlist:
+                playlist_title = _sanitize_filename(info.get("title") or "Playlist") if info else "Playlist"
+                pl_dir = playlist_tmp / playlist_title
+                vids = []
+                if pl_dir.exists():
+                    vids = sorted(pl_dir.glob("*"))
+                if not vids:
+                    vids = sorted(playlist_tmp.rglob("*")) if playlist_tmp.exists() else []
+                if not vids:
+                    vids = list(tmp.glob("video.*"))
+                if not vids:
+                    raise FileNotFoundError("No video files found for playlist")
+
+                if len(vids) == 1:
+                    title = (info.get("title") or task_id) if info else task_id
+                    safe  = _sanitize_filename(title)
+                    ext   = vids[0].suffix or ".mp4"
+                    fname = f"{safe}{ext}"
+                    dest  = Path(DOWNLOAD_DIR) / fname
+                    shutil.move(str(vids[0]), str(dest))
+                    return {
+                        "title":         title,
+                        "duration":      info.get("duration") if info else None,
+                        "thumbnail_url": info.get("thumbnail") if info else "",
+                        "filename":      fname,
+                        "filepath":      str(dest),
+                        "file_size":     dest.stat().st_size,
+                    }
+
+                zip_name = f"{playlist_title}.zip"
+                zip_path = Path(DOWNLOAD_DIR) / zip_name
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for vid in vids:
+                        zf.write(vid, vid.name)
+                for vid in vids:
+                    vid.unlink(missing_ok=True)
+
+                total_size = zip_path.stat().st_size
+                return {
+                    "title":         playlist_title,
+                    "duration":      None,
+                    "thumbnail_url": info.get("thumbnail") if info else "",
+                    "filename":      zip_name,
+                    "filepath":      str(zip_path),
+                    "file_size":     total_size,
+                }
 
             title = (info.get("title") or task_id) if info else task_id
             dur   = info.get("duration")  if info else None

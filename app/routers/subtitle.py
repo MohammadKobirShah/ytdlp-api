@@ -1,25 +1,22 @@
 """
-Video info dump + merge-download endpoints.
+Subtitle download endpoints.
 """
 
 import asyncio
 import mimetypes
 import re
-from typing import Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, field_validator
 
-from app.config import PORT
+from app.config import DEFAULT_SUB_FORMAT, DEFAULT_SUB_LANG, PORT, SUBTITLE_FORMATS
 from app.manager import TaskStatus, TaskType, manager
-from app.downloader import get_info_dump, process_video
+from app.downloader import process_subtitle
 from app.tunnel import get_tunnel_url
 
-router = APIRouter(prefix="/api/video", tags=["video"])
-
-# ─── URL Validation ───────────────────────────────────────
+router = APIRouter(prefix="/api/subtitle", tags=["subtitle"])
 
 ALLOWED_URL_PATTERN = re.compile(
     r"^https?://"
@@ -37,10 +34,10 @@ BLOCKED_HOSTS = re.compile(
 )
 
 
-class VideoRequest(BaseModel):
+class SubtitleRequest(BaseModel):
     url: str
-    format_id: Optional[str] = None
-    playlist: bool = False
+    lang: str = DEFAULT_SUB_LANG
+    format: str = DEFAULT_SUB_FORMAT
 
     @field_validator("url")
     @classmethod
@@ -54,10 +51,22 @@ class VideoRequest(BaseModel):
             raise ValueError("Private/internal URLs are not allowed")
         return v
 
+    @field_validator("format")
+    @classmethod
+    def validate_format(cls, v: str) -> str:
+        if v.lower() not in SUBTITLE_FORMATS:
+            raise ValueError(
+                f"Invalid subtitle format '{v}'. "
+                f"Choose from: {sorted(SUBTITLE_FORMATS)}"
+            )
+        return v.lower()
 
-class VideoResponse(BaseModel):
+
+class SubtitleResponse(BaseModel):
     task_id: str
     status: str
+    lang: str
+    format: str
     message: str
 
 
@@ -73,53 +82,30 @@ def _media_type_for(path) -> str:
     return mime or "application/octet-stream"
 
 
-# ─── INFO DUMP ────────────────────────────────────────────
-
-@router.get("/info")
-async def video_info(
-    url: str = Query(..., description="Video URL"),
-    include_raw: bool = Query(
-        False, description="Include full yt-dlp info dict"
-    ),
-    noplaylist: bool = Query(
-        True, description="Set false to allow playlist/channel extraction"
-    ),
-):
-    """
-    Full format dump for a URL.
-    Returns all available formats as JSON.
-    When noplaylist=false, returns playlist/channel entries.
-    """
-    try:
-        data = await get_info_dump(url, include_raw=include_raw, noplaylist=noplaylist)
-        return JSONResponse(content=data)
-    except Exception as exc:
-        raise HTTPException(400, f"Failed to extract info: {exc}")
-
-
-# ─── MERGE DOWNLOAD ───────────────────────────────────────
-
-@router.post("", response_model=VideoResponse)
-async def create_video(req: VideoRequest):
-    """Queue a video+audio merge download (no transcode, copy only)."""
+@router.post("", response_model=SubtitleResponse)
+async def create_subtitle(req: SubtitleRequest):
+    """Queue a subtitle download job."""
     task = manager.create_task(
         url=req.url,
-        task_type=TaskType.VIDEO,
-        format_id=req.format_id,
-        is_playlist=req.playlist,
+        task_type=TaskType.SUBTITLE,
+        preset=None,
+        lang=req.lang,
+        sub_format=req.format,
     )
 
-    asyncio.create_task(process_video(task.id))
+    asyncio.create_task(process_subtitle(task.id))
 
-    return VideoResponse(
+    return SubtitleResponse(
         task_id=task.id,
         status=task.status.value,
-        message="Queued. Poll /api/video/{task_id}/status for progress.",
+        lang=req.lang,
+        format=req.format,
+        message="Queued. Poll /api/subtitle/{task_id}/status for progress.",
     )
 
 
 @router.get("/{task_id}/status")
-async def video_status(task_id: str):
+async def subtitle_status(task_id: str):
     task = manager.get(task_id)
     if not task:
         raise HTTPException(404, "Task not found")
@@ -127,16 +113,16 @@ async def video_status(task_id: str):
     base = get_tunnel_url() or f"http://localhost:{PORT}"
     dl_link = None
     if task.status == TaskStatus.COMPLETED:
-        dl_link = f"{base}/api/video/{task_id}/download"
+        dl_link = f"{base}/api/subtitle/{task_id}/download"
 
     return {
         "task_id":       task.id,
         "type":          task.type.value,
         "status":        task.status.value,
         "progress":      task.progress,
-        "format_id":     task.format_id,
+        "lang":          task.lang or DEFAULT_SUB_LANG,
+        "sub_format":    task.sub_format or DEFAULT_SUB_FORMAT,
         "title":         task.title,
-        "artist":        task.artist,
         "description":   task.description,
         "thumbnail_url": task.thumbnail_url,
         "duration":      task.duration,
@@ -150,7 +136,7 @@ async def video_status(task_id: str):
 
 
 @router.get("/{task_id}/download")
-async def download_video(task_id: str):
+async def download_subtitle(task_id: str):
     task = manager.get(task_id)
     if not task:
         raise HTTPException(404, "Task not found")
@@ -169,11 +155,11 @@ async def download_video(task_id: str):
 
     return FileResponse(
         path=str(p),
-        filename=task.filename or f"{task_id}{p.suffix}",
+        filename=task.filename or f"{task_id}.vtt",
         media_type=_media_type_for(p),
         headers={
             "Content-Disposition": _make_content_disposition(
-                task.filename or f"{task_id}{p.suffix}"
+                task.filename or f"{task_id}.vtt"
             ),
             "Cache-Control": "public, max-age=86400",
         },
@@ -181,7 +167,7 @@ async def download_video(task_id: str):
 
 
 @router.delete("/{task_id}")
-async def delete_video(task_id: str):
+async def delete_subtitle(task_id: str):
     task = manager.get(task_id)
     if not task:
         raise HTTPException(404, "Task not found")

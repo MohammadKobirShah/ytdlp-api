@@ -14,6 +14,11 @@ DOWNLOAD_TIMEOUT     = int(os.getenv("DOWNLOAD_TIMEOUT_SECONDS", "1800"))
 DOWNLOAD_DIR         = os.getenv("DOWNLOAD_DIR", "downloads")
 COOKIES_FILE         = os.getenv("COOKIES_FILE", "/app/cookies.txt")
 
+SUBTITLE_FORMATS = {"vtt", "srt", "ass", "lrc"}
+DEFAULT_SUB_LANG = os.getenv("DEFAULT_SUB_LANG", "en")
+DEFAULT_SUB_FORMAT = os.getenv("DEFAULT_SUB_FORMAT", "vtt")
+MIN_DISK_GB  = int(os.getenv("MIN_DISK_GB", "1"))
+
 AUDIO_PRESETS = {
     "48k":  {"bitrate": "48k",  "sample_rate": 22050, "channels": 1},
     "64k":  {"bitrate": "64k",  "sample_rate": 22050, "channels": 1},

@@ -163,6 +163,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
           <tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr>
           <tr><td>url<span class="req">REQ</span></td><td>string</td><td>&mdash;</td><td>Video/audio URL</td></tr>
           <tr><td>preset</td><td>string</td><td>"128k"</td><td>48k | 64k | 128k | 320k</td></tr>
+          <tr><td>playlist</td><td>bool</td><td>false</td><td>Download playlist/channel as zip</td></tr>
         </table>
         <h4>Example Request</h4>
         <pre><button class="ep-copy" onclick="copyCmd(this)">Copy</button><span class="c"># Audio @ 128k MP3</span>
@@ -249,10 +250,20 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
       <div class="ep-body">
         <h4>Query Parameters</h4>
         <table class="params">
-          <tr><th>Param</th><th>Type</th><th>Description</th></tr>
-          <tr><td>url<span class="req">REQ</span></td><td>string</td><td>Video URL</td></tr>
-          <tr><td>include_raw</td><td>bool</td><td>Include full yt-dlp info dict (default: false)</td></tr>
+          <tr><th>Param</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          <tr><td>url<span class="req">REQ</span></td><td>string</td><td>&mdash;</td><td>Video/playlist URL</td></tr>
+          <tr><td>include_raw</td><td>bool</td><td>false</td><td>Include full yt-dlp info dict</td></tr>
+          <tr><td>noplaylist</td><td>bool</td><td>true</td><td>Set to false to list playlist entries</td></tr>
         </table>
+        <h4>Playlist Response</h4>
+        <pre>{
+  <span class="k">"_type"</span>: <span class="s">"playlist"</span>,
+  <span class="k">"title"</span>: <span class="s">"Playlist Title"</span>,
+  <span class="k">"playlist_count"</span>: <span class="n">10</span>,
+  <span class="k">"entries"</span>: [
+    { <span class="k">"id"</span>: <span class="s">"..."</span>, <span class="k">"title"</span>: <span class="s">"Video 1"</span>, <span class="k">"duration"</span>: <span class="n">120</span>, <span class="k">"url"</span>: <span class="s">"..."</span> }
+  ]
+}</pre>
         <h4>Example</h4>
         <pre><button class="ep-copy" onclick="copyCmd(this)">Copy</button>curl <span class="s">{{BASE}}</span>/api/video/info?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ</pre>
         <h4>Response</h4>
@@ -289,6 +300,7 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
           <tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr>
           <tr><td>url<span class="req">REQ</span></td><td>string</td><td>&mdash;</td><td>Video URL</td></tr>
           <tr><td>format_id</td><td>string</td><td>null</td><td>e.g. "137+251" or blank for best</td></tr>
+          <tr><td>playlist</td><td>bool</td><td>false</td><td>Download playlist/channel as zip</td></tr>
         </table>
         <h4>Example</h4>
         <pre><button class="ep-copy" onclick="copyCmd(this)">Copy</button><span class="c"># Best quality (auto-merge)</span>
@@ -362,9 +374,119 @@ Content-Disposition: attachment; filename*=UTF-8''...</span>
     </div>
   </div>
 
+  <!-- SUBTITLE -->
+  <div class="section">
+    <div class="section-title"><span class="sec-icon audio">&#x1f4c4;</span> Subtitles</div>
+
+    <div class="ep-card" data-ep="sub-post">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-badge post">POST</span>
+        <span class="ep-path">/api/subtitle</span>
+        <span class="ep-desc">Queue subtitle download</span>
+        <span class="ep-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      <div class="ep-body">
+        <h4>Request Body</h4>
+        <table class="params">
+          <tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          <tr><td>url<span class="req">REQ</span></td><td>string</td><td>&mdash;</td><td>Video URL</td></tr>
+          <tr><td>lang</td><td>string</td><td>"en"</td><td>ISO language code</td></tr>
+          <tr><td>format</td><td>string</td><td>"vtt"</td><td>vtt | srt | ass | lrc</td></tr>
+        </table>
+        <h4>Example</h4>
+        <pre><button class="ep-copy" onclick="copyCmd(this)">Copy</button>curl -X POST <span class="s">{{BASE}}</span>/api/subtitle \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "lang": "en", "format": "vtt"}'</span></pre>
+        <h4>Response</h4>
+        <pre>{
+  <span class="k">"task_id"</span>: <span class="s">"s1b2c3d4e5f6"</span>,
+  <span class="k">"status"</span>: <span class="s">"queued"</span>,
+  <span class="k">"lang"</span>: <span class="s">"en"</span>,
+  <span class="k">"format"</span>: <span class="s">"vtt"</span>,
+  <span class="k">"message"</span>: <span class="s">"Queued. Poll /api/subtitle/{task_id}/status for progress."</span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="ep-card" data-ep="sub-status">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-badge get">GET</span>
+        <span class="ep-path">/api/subtitle/{task_id}/status</span>
+        <span class="ep-desc">Poll subtitle task</span>
+        <span class="ep-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      <div class="ep-body">
+        <h4>Response</h4>
+        <pre>{
+  <span class="k">"task_id"</span>: <span class="s">"s1b2c3d4e5f6"</span>,
+  <span class="k">"type"</span>: <span class="s">"subtitle"</span>,
+  <span class="k">"status"</span>: <span class="s">"completed"</span>,
+  <span class="k">"lang"</span>: <span class="s">"en"</span>,
+  <span class="k">"sub_format"</span>: <span class="s">"vtt"</span>,
+  <span class="k">"filename"</span>: <span class="s">"Rick Astley - Never Gonna Give You Up.en.vtt"</span>,
+  <span class="k">"download_url"</span>: <span class="s">"https://xxx.trycloudflare.com/api/subtitle/s1b2c3d4e5f6/download"</span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="ep-card" data-ep="sub-download">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-badge get">GET</span>
+        <span class="ep-path">/api/subtitle/{task_id}/download</span>
+        <span class="ep-desc">Download subtitle file</span>
+        <span class="ep-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      <div class="ep-body">
+        <h4>Response</h4>
+        <pre><span class="c">Content-Type: text/vtt
+Content-Disposition: attachment</span>
+
+<span class="c">WebVTT subtitle file with captions</span></pre>
+      </div>
+    </div>
+
+    <div class="ep-card" data-ep="sub-delete">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-badge delete">DEL</span>
+        <span class="ep-path">/api/subtitle/{task_id}</span>
+        <span class="ep-desc">Remove task + file</span>
+        <span class="ep-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      <div class="ep-body">
+        <h4>Response</h4>
+        <pre>{ <span class="k">"deleted"</span>: <span class="s">"s1b2c3d4e5f6"</span> }</pre>
+      </div>
+    </div>
+  </div>
+
   <!-- SYSTEM -->
   <div class="section">
     <div class="section-title"><span class="sec-icon sys">&#x2699;&#xfe0f;</span> System</div>
+
+    <div class="ep-card" data-ep="sys-health">
+      <div class="ep-head" onclick="toggle(this)">
+        <span class="ep-badge get">GET</span>
+        <span class="ep-path">/api/health</span>
+        <span class="ep-desc">Dependency health checks</span>
+        <span class="ep-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      <div class="ep-body">
+        <h4>Response</h4>
+        <pre>{
+  <span class="k">"status"</span>: <span class="s">"healthy"</span>,
+  <span class="k">"version"</span>: <span class="s">"1.0.0"</span>,
+  <span class="k">"uptime_seconds"</span>: <span class="n">1234</span>,
+  <span class="k">"checks"</span>: {
+    <span class="k">"ffmpeg"</span>: { <span class="k">"status"</span>: <span class="s">"ok"</span>, <span class="k">"version"</span>: <span class="s">"6.1.1"</span>, <span class="k">"path"</span>: <span class="s">"/usr/bin/ffmpeg"</span> },
+    <span class="k">"cloudflared"</span>: { <span class="k">"status"</span>: <span class="s">"ok"</span>, <span class="k">"version"</span>: <span class="s">"..."</span>, <span class="k">"path"</span>: <span class="s">"..."</span> },
+    <span class="k">"disk_space"</span>: { <span class="k">"status"</span>: <span class="s">"ok"</span>, <span class="k">"free_gb"</span>: <span class="n">55</span>, <span class="k">"free_percent"</span>: <span class="n">55</span> },
+    <span class="k">"download_dir"</span>: { <span class="k">"status"</span>: <span class="s">"ok"</span>, <span class="k">"writable"</span>: <span class="k">true</span> },
+    <span class="k">"cookies"</span>: { <span class="k">"loaded"</span>: <span class="k">true</span>, <span class="k">"size"</span>: <span class="n">123</span> }
+  },
+  <span class="k">"tasks"</span>: { <span class="k">"total"</span>: <span class="n">0</span>, <span class="k">"active"</span>: <span class="n">0</span> }
+}</pre>
+      </div>
+    </div>
 
     <div class="ep-card" data-ep="sys-status">
       <div class="ep-head" onclick="toggle(this)">
