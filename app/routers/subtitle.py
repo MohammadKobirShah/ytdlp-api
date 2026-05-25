@@ -13,7 +13,7 @@ from pydantic import BaseModel, field_validator
 
 from app.config import DEFAULT_SUB_FORMAT, DEFAULT_SUB_LANG, PORT, SUBTITLE_FORMATS
 from app.manager import TaskStatus, TaskType, manager
-from app.downloader import process_subtitle
+from app.downloader import clean_url, process_subtitle
 from app.tunnel import get_tunnel_url
 
 router = APIRouter(prefix="/api/subtitle", tags=["subtitle"])
@@ -44,6 +44,7 @@ class SubtitleRequest(BaseModel):
     def validate_url(cls, v: str) -> str:
         from urllib.parse import urlparse
 
+        v = clean_url(v)
         if not ALLOWED_URL_PATTERN.match(v):
             raise ValueError("Invalid URL format")
         parsed = urlparse(v)

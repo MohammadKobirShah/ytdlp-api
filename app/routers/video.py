@@ -14,7 +14,7 @@ from pydantic import BaseModel, field_validator
 
 from app.config import PORT
 from app.manager import TaskStatus, TaskType, manager
-from app.downloader import get_info_dump, process_video
+from app.downloader import clean_url, get_info_dump, process_video
 from app.tunnel import get_tunnel_url
 
 router = APIRouter(prefix="/api/video", tags=["video"])
@@ -47,6 +47,7 @@ class VideoRequest(BaseModel):
     def validate_url(cls, v: str) -> str:
         from urllib.parse import urlparse
 
+        v = clean_url(v)
         if not ALLOWED_URL_PATTERN.match(v):
             raise ValueError("Invalid URL format")
         parsed = urlparse(v)
@@ -90,6 +91,7 @@ async def video_info(
     Returns all available formats as JSON.
     When noplaylist=false, returns playlist/channel entries.
     """
+    url = clean_url(url)
     try:
         data = await get_info_dump(url, include_raw=include_raw, noplaylist=noplaylist)
         return JSONResponse(content=data)

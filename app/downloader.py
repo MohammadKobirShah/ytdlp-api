@@ -29,6 +29,12 @@ from app.config import (
 )
 from app.manager import TaskStatus, manager
 
+
+def clean_url(raw: str) -> str:
+    """Strip trailing yt-dlp CLI flags accidentally pasted with the URL."""
+    return re.sub(r'\s+-{1,2}\w+.*$', '', raw).strip()
+
+
 logger = logging.getLogger("ytdlp-api.dl")
 
 
@@ -140,6 +146,7 @@ def _extract_with_retry(
     `extra_opts` is merged on top of the base opts for *every* attempt
     so that format / outtmpl / postprocessors / hooks are never lost.
     """
+    url = clean_url(url)
     last_err: Optional[Exception] = None
 
     # cookie policy per attempt

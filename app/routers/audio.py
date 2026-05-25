@@ -13,7 +13,7 @@ from pydantic import BaseModel, field_validator
 
 from app.config import AUDIO_PRESETS, PORT
 from app.manager import TaskStatus, TaskType, manager
-from app.downloader import process_audio
+from app.downloader import clean_url, process_audio
 from app.tunnel import get_tunnel_url
 
 router = APIRouter(prefix="/api/audio", tags=["audio"])
@@ -46,6 +46,7 @@ class AudioRequest(BaseModel):
     def validate_url(cls, v: str) -> str:
         from urllib.parse import urlparse
 
+        v = clean_url(v)
         if not ALLOWED_URL_PATTERN.match(v):
             raise ValueError("Invalid URL format")
         parsed = urlparse(v)
