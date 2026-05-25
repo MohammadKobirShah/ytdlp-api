@@ -6,6 +6,7 @@ services:
       - "8000:8000"
     volumes:
       - ./downloads:/app/downloads
+      - ./cookies.txt:/app/cookies.txt:ro
     environment:
       - HOST=0.0.0.0
       - PORT=8000
@@ -14,6 +15,7 @@ services:
       - CLEANUP_HOURS=24
       - MAX_TASKS_IN_MEMORY=1000
       - DOWNLOAD_TIMEOUT_SECONDS=1800
+      - COOKIES_FILE=/app/cookies.txt
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/status')"]
