@@ -17,10 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/* /tmp/*
 
-# ─── Python deps ──────────────────────────────────────────
+# ─── Python deps — force latest yt-dlp ────────────────────
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir --upgrade yt-dlp
 
 # ─── App code ─────────────────────────────────────────────
 COPY . .
