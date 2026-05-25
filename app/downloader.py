@@ -1,10 +1,12 @@
 """
 yt-dlp + FFmpeg wrapper — runs in a thread pool.
+Randomized 2026 user-agent rotation for anti-bot bypass.
 """
 
 import asyncio
 import logging
 import os
+import random
 import re
 import shutil
 import unicodedata
@@ -17,6 +19,39 @@ from app.config import AUDIO_PRESETS, COOKIES_FILE, DOWNLOAD_DIR, DOWNLOAD_TIMEO
 from app.manager import TaskStatus, TaskType, manager
 
 logger = logging.getLogger("ytdlp-api.dl")
+
+
+# ─── User-Agent Pool (2026 realistic) ─────────────────────
+
+_UA_POOL: List[str] = [
+    # ── Windows ──
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+    # ── Android ──
+    "Mozilla/5.0 (Linux; Android 15; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 15; Pixel 9 Pro XL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 15; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/28.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 15; SM-S928B Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+    # ── iPhone / iOS ──
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/148.0.0.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    # ── macOS ──
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    # ── Linux ──
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0",
+    # ── Crawlers (sometimes whitelisted) ──
+    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+]
+
+
+def _pick_ua() -> str:
+    return random.choice(_UA_POOL)
 
 
 # ─── Helpers ──────────────────────────────────────────────
@@ -39,21 +74,32 @@ def _sanitize_metadata(val: Any) -> str:
 def _base_opts() -> Dict:
     """
     Base yt-dlp options shared by all calls.
-    Adds cookies + YouTube extractor args when available.
+    - Random UA from 2026 pool
+    - Cookies when available
+    - No player_client restrictions
     """
     opts: Dict = {
-        "quiet": True,
-        "no_warnings": True,
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["web", "ios", "mweb"],
-            },
+        "quiet":            True,
+        "no_warnings":      True,
+        "http_headers": {
+            "User-Agent":      _pick_ua(),
+            "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Upgrade-Insecure-Requests": "1",
         },
     }
 
     if COOKIES_FILE and os.path.isfile(COOKIES_FILE):
         opts["cookiefile"] = COOKIES_FILE
-        logger.info("Using cookies from %s (%d bytes)", COOKIES_FILE, os.path.getsize(COOKIES_FILE))
+        logger.info(
+            "Using cookies from %s (%d bytes) UA=%s",
+            COOKIES_FILE,
+            os.path.getsize(COOKIES_FILE),
+            opts["http_headers"]["User-Agent"][0:60],
+        )
+    else:
+        logger.info("No cookies — UA=%s", opts["http_headers"]["User-Agent"][0:60])
 
     return opts
 
@@ -66,7 +112,6 @@ async def get_video_info(url: str) -> Dict:
     def _run():
         opts = _base_opts()
         opts["extract_flat"] = False
-        opts["forcejson"] = True
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
 
@@ -156,8 +201,8 @@ async def process_audio(task_id: str):
             outtmpl = str(tmp / "audio.%(ext)s")
             opts = _base_opts()
             opts.update({
-                "format":        "bestaudio/best",
-                "outtmpl":       outtmpl,
+                "format":         "bestaudio/best",
+                "outtmpl":        outtmpl,
                 "progress_hooks": [_make_hook(task_id)],
                 "postprocessors": [
                     {
