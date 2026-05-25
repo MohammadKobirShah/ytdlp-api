@@ -96,9 +96,10 @@ def _build_base_opts(use_cookies: bool = True) -> Dict:
     ua = _pick_ua()
 
     opts: Dict = {
-        "quiet":             True,
-        "no_warnings":       True,
-        "extractor_retries": 3,
+        "quiet":                   True,
+        "no_warnings":             True,
+        "extractor_retries":       3,
+        "ignore_no_formats_error": True,
         "http_headers": {
             "User-Agent":                ua,
             "Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
