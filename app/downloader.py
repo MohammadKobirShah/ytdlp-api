@@ -36,12 +36,26 @@ def _sanitize_metadata(val: Any) -> str:
     return s[:500]
 
 
-def _cookies_args() -> List[str]:
-    """Return yt-dlp cookie args if cookies file exists."""
+def _base_opts() -> Dict:
+    """
+    Base yt-dlp options shared by all calls.
+    Adds cookies + YouTube extractor args when available.
+    """
+    opts: Dict = {
+        "quiet": True,
+        "no_warnings": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["web", "ios", "mweb"],
+            },
+        },
+    }
+
     if COOKIES_FILE and os.path.isfile(COOKIES_FILE):
-        logger.info("Using cookies from %s", COOKIES_FILE)
-        return ["--cookies", COOKIES_FILE]
-    return []
+        opts["cookiefile"] = COOKIES_FILE
+        logger.info("Using cookies from %s (%d bytes)", COOKIES_FILE, os.path.getsize(COOKIES_FILE))
+
+    return opts
 
 
 # ─── Info ─────────────────────────────────────────────────
@@ -50,15 +64,9 @@ async def get_video_info(url: str) -> Dict:
     loop = asyncio.get_running_loop()
 
     def _run():
-        opts = {
-            "quiet": True,
-            "no_warnings": True,
-            "extract_flat": False,
-            "forcejson": True,
-        }
-        extra = _cookies_args()
-        if extra:
-            opts["extra_args"] = extra
+        opts = _base_opts()
+        opts["extract_flat"] = False
+        opts["forcejson"] = True
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
 
@@ -97,10 +105,7 @@ async def get_info_dump(url: str, include_raw: bool = False) -> Dict:
     loop = asyncio.get_running_loop()
 
     def _run():
-        opts = {"quiet": True, "no_warnings": True}
-        extra = _cookies_args()
-        if extra:
-            opts["extra_args"] = extra
+        opts = _base_opts()
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
 
@@ -149,11 +154,10 @@ async def process_audio(task_id: str):
 
         def _run():
             outtmpl = str(tmp / "audio.%(ext)s")
-            opts = {
+            opts = _base_opts()
+            opts.update({
                 "format":        "bestaudio/best",
                 "outtmpl":       outtmpl,
-                "quiet":         True,
-                "no_warnings":   True,
                 "progress_hooks": [_make_hook(task_id)],
                 "postprocessors": [
                     {
@@ -176,10 +180,7 @@ async def process_audio(task_id: str):
                     ],
                 },
                 "writethumbnail": True,
-            }
-            extra = _cookies_args()
-            if extra:
-                opts["extra_args"] = extra
+            })
 
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(task.url, download=True)
@@ -254,21 +255,17 @@ async def process_video(task_id: str):
 
         def _run():
             outtmpl = str(tmp / "video.%(ext)s")
-            opts = {
-                "format":         fmt,
+            opts = _base_opts()
+            opts.update({
+                "format":              fmt,
                 "merge_output_format": "mp4",
-                "outtmpl":        outtmpl,
-                "quiet":          True,
-                "no_warnings":    True,
-                "progress_hooks": [_make_hook(task_id)],
+                "outtmpl":             outtmpl,
+                "progress_hooks":      [_make_hook(task_id)],
                 "postprocessors": [
                     {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"},
                     {"key": "FFmpegMetadata", "add_metadata": True},
                 ],
-            }
-            extra = _cookies_args()
-            if extra:
-                opts["extra_args"] = extra
+            })
 
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(task.url, download=True)
