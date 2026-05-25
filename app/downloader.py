@@ -1,6 +1,6 @@
 """
 yt-dlp + FFmpeg wrapper — runs in a thread pool.
-Randomized 2026 user-agent rotation for anti-bot bypass.
+Randomized 2026 user-agent rotation + retry logic.
 """
 
 import asyncio
@@ -12,6 +12,7 @@ import shutil
 import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 import yt_dlp
 
@@ -51,6 +52,44 @@ def _pick_ua() -> str:
     return random.choice(_UA_POOL)
 
 
+# ─── URL Cleaning ─────────────────────────────────────────
+
+# Params that cause playlist/radio/extraction issues
+_STRIP_PARAMS = {
+    "list", "start_radio", "pp", "t", "time_continue",
+    "index", "playnext", "nojs",
+}
+
+
+def _clean_url(url: str) -> str:
+    """
+    Strip problematic query params from YouTube URLs.
+    Keeps only 'v' and other safe params.
+    """
+    parsed = urlparse(url)
+    if "youtube.com" not in parsed.netloc and "youtu.be" not in parsed.netloc:
+        return url
+
+    qs = parse_qs(parsed.query, keep_blank_values=True)
+    cleaned = {k: v for k, v in qs.items() if k not in _STRIP_PARAMS}
+
+    # youtu.be short URLs — convert to standard
+    if "youtu.be" in parsed.netloc and parsed.path.strip("/"):
+        cleaned["v"] = [parsed.path.strip("/")]
+        new_path = "/watch"
+    else:
+        new_path = parsed.path
+
+    new_query = urlencode(cleaned, doseq=True)
+    cleaned_url = urlunparse((
+        parsed.scheme, parsed.netloc, new_path,
+        parsed.params, new_query, "",
+    ))
+    if cleaned_url != url:
+        logger.info("Cleaned URL: %s -> %s", url, cleaned_url)
+    return cleaned_url
+
+
 # ─── Helpers ──────────────────────────────────────────────
 
 def _sanitize_filename(name: str) -> str:
@@ -68,19 +107,19 @@ def _sanitize_metadata(val: Any) -> str:
     return s[:500]
 
 
-def _base_opts() -> Dict:
+def _build_opts(use_cookies: bool = True) -> Dict:
     """
-    Base yt-dlp options shared by all calls.
+    Build yt-dlp options.
     - Random UA from 2026 pool
-    - Cookies when available
-    - noplaylist: extract single video only
-    - No player_client restrictions
+    - Cookies when available and requested
+    - noplaylist: single video only
     """
     ua = _pick_ua()
     opts: Dict = {
-        "quiet":       True,
-        "no_warnings": True,
-        "noplaylist":  True,
+        "quiet":              True,
+        "no_warnings":        True,
+        "noplaylist":         True,
+        "extractor_retries":  3,
         "http_headers": {
             "User-Agent":      ua,
             "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -90,18 +129,57 @@ def _base_opts() -> Dict:
         },
     }
 
-    if COOKIES_FILE and os.path.isfile(COOKIES_FILE):
+    if use_cookies and COOKIES_FILE and os.path.isfile(COOKIES_FILE):
         opts["cookiefile"] = COOKIES_FILE
-        logger.info(
-            "Using cookies from %s (%d bytes) UA=%s",
-            COOKIES_FILE,
-            os.path.getsize(COOKIES_FILE),
-            ua[0:60],
-        )
+        logger.info("Cookies ON  UA=%s", ua[0:55])
     else:
-        logger.info("No cookies — UA=%s", ua[0:60])
+        logger.info("Cookies OFF UA=%s", ua[0:55])
 
     return opts
+
+
+# ─── Extract with retry ───────────────────────────────────
+
+def _extract_with_retry(url: str, opts: Dict, download: bool = False) -> Dict:
+    """
+    Try extraction. On failure, retry up to 2 more times:
+      1) Same opts (yt-dlp internal retry with different throttle)
+      2) Without cookies (in case cookies are stale/causing issues)
+    """
+    last_err = None
+    cleaned = _clean_url(url)
+
+    # Attempt 1: with cookies (if available)
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            return ydl.extract_info(cleaned, download=download)
+    except Exception as e:
+        last_err = e
+        logger.warning("Attempt 1 failed: %s", e)
+
+    # Attempt 2: fresh UA, same cookie setting
+    try:
+        opts2 = _build_opts(use_cookies=COOKIES_FILE and os.path.isfile(COOKIES_FILE))
+        if "extract_flat" in opts:
+            opts2["extract_flat"] = opts["extract_flat"]
+        with yt_dlp.YoutubeDL(opts2) as ydl:
+            return ydl.extract_info(cleaned, download=download)
+    except Exception as e:
+        last_err = e
+        logger.warning("Attempt 2 failed: %s", e)
+
+    # Attempt 3: NO cookies, fresh UA
+    try:
+        opts3 = _build_opts(use_cookies=False)
+        if "extract_flat" in opts:
+            opts3["extract_flat"] = opts["extract_flat"]
+        with yt_dlp.YoutubeDL(opts3) as ydl:
+            return ydl.extract_info(cleaned, download=download)
+    except Exception as e:
+        last_err = e
+        logger.warning("Attempt 3 failed: %s", e)
+
+    raise last_err
 
 
 # ─── Info ─────────────────────────────────────────────────
@@ -110,14 +188,14 @@ async def get_video_info(url: str) -> Dict:
     loop = asyncio.get_running_loop()
 
     def _run():
-        opts = _base_opts()
+        opts = _build_opts()
         opts["extract_flat"] = False
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(url, download=False)
+        info = _extract_with_retry(url, opts, download=False)
+        if not info:
+            raise ValueError("No info extracted")
+        return info
 
     info = await loop.run_in_executor(None, _run)
-    if not info:
-        raise ValueError("No info extracted")
 
     formats = []
     for f in info.get("formats") or []:
@@ -150,9 +228,8 @@ async def get_info_dump(url: str, include_raw: bool = False) -> Dict:
     loop = asyncio.get_running_loop()
 
     def _run():
-        opts = _base_opts()
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(url, download=False)
+        opts = _build_opts()
+        return _extract_with_retry(url, opts, download=False)
 
     info = await loop.run_in_executor(None, _run)
     if include_raw:
@@ -199,7 +276,7 @@ async def process_audio(task_id: str):
 
         def _run():
             outtmpl = str(tmp / "audio.%(ext)s")
-            opts = _base_opts()
+            opts = _build_opts()
             opts.update({
                 "format":         "bestaudio/best",
                 "outtmpl":        outtmpl,
@@ -227,8 +304,7 @@ async def process_audio(task_id: str):
                 "writethumbnail": True,
             })
 
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(task.url, download=True)
+            info = _extract_with_retry(task.url, opts, download=True)
 
             title  = info.get("title", task_id) if info else task_id
             artist = (info.get("artist") or info.get("uploader") or "") if info else ""
@@ -300,7 +376,7 @@ async def process_video(task_id: str):
 
         def _run():
             outtmpl = str(tmp / "video.%(ext)s")
-            opts = _base_opts()
+            opts = _build_opts()
             opts.update({
                 "format":              fmt,
                 "merge_output_format": "mp4",
@@ -312,8 +388,7 @@ async def process_video(task_id: str):
                 ],
             })
 
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(task.url, download=True)
+            info = _extract_with_retry(task.url, opts, download=True)
 
             title = info.get("title", task_id) if info else task_id
             dur   = info.get("duration") if info else None
