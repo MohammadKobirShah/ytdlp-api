@@ -10,6 +10,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# ─── Apply yt-dlp resilience patch before any extractor usage ───
+import app.patch_extractors  # noqa: F401
+
 from app.config import PORT
 from app.tunnel import start_tunnel
 from app.manager import manager

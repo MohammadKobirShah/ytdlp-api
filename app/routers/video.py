@@ -94,7 +94,24 @@ async def video_info(
         data = await get_info_dump(url, include_raw=include_raw, noplaylist=noplaylist)
         return JSONResponse(content=data)
     except Exception as exc:
-        raise HTTPException(400, f"Failed to extract info: {exc}")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "url": url,
+                "error": str(exc)[:500],
+                "extraction_warnings": [
+                    "Partial extraction failure — some fields may be missing"
+                ],
+                "title": "",
+                "duration": None,
+                "thumbnail": "",
+                "uploader": "",
+                "webpage_url": url,
+                "extractor": "",
+                "description": "",
+                "formats": [],
+            },
+        )
 
 
 # ─── MERGE DOWNLOAD ───────────────────────────────────────
